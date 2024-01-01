@@ -3,11 +3,15 @@
   "version": "0.0.1",
   "description": "",
   "scripts": {
-    "start": "ts-node ./app"
+    "start": "ts-node ./app",
+    "dev": "nodemon"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^16.3.1",
+    "nodemon": "^3.0.2",
+    "telegraf": "^4.15.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   },
