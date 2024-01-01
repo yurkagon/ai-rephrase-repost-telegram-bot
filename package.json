@@ -1,0 +1,17 @@
+{
+  "name": "copywriterepostbot",
+  "version": "0.0.1",
+  "description": "",
+  "scripts": {
+    "start": "ts-node ./app"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6"
+  }
+}
