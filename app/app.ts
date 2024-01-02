@@ -1,3 +1,4 @@
+import { Context } from "telegraf";
 import { toHTML } from "@telegraf/entity";
 import _ from "lodash";
 
@@ -21,76 +22,92 @@ class App {
   public async run() {
     this.bot.init({
       targetChannel: this.targetChannel,
-      onUserStartBot: (ctx) => ctx.reply("Welcome"),
-      onBotChatMessage: (ctx) => console.log(ctx.message),
-      onTrackedChannelPost: async (ctx: any) => {
-        if (ctx.channelPost.media_group_id) {
-          const mediaGroupID = ctx.channelPost.media_group_id;
-          if (!this.mediaGroupStore[mediaGroupID]) {
-            const mediaGroupStore = this.mediaGroupStore;
-            const targetChannel = this.targetChannel;
-
-            mediaGroupStore[mediaGroupID] = {
-              data: [],
-              publish: _.debounce(async function () {
-                try {
-                  await ctx.telegram.sendMediaGroup(
-                    targetChannel,
-                    this.data
-                  );
-                } catch (error) {
-                  console.error("error", error);
-                  console.error("Media group data", this.data);
-                } finally {
-                  delete mediaGroupStore[mediaGroupID];
-                }
-              }, 1000),
-            };
-          }
-
-          const highestQualityPhoto = _.last(
-            ctx.channelPost.photo as [{ file_id: string }]
-          );
-          const mediaGroupItem = {
-            type: "photo",
-            media: highestQualityPhoto.file_id,
-          };
-
-          const formattedCaption = await this.rewriter.rewriteTelegramHTML(
-            ctx.channelPost.caption
-          );
-          if (formattedCaption) {
-            mediaGroupItem["caption"] = formattedCaption;
-            mediaGroupItem["parse_mode"] = "HTML";
-          }
-
-          this.mediaGroupStore[mediaGroupID].data.push(mediaGroupItem);
-
-          await this.mediaGroupStore[mediaGroupID].publish();
-        } else if (ctx.channelPost.photo) {
-          const photo = ctx.channelPost.photo as [{ file_id: string }];
-          const caption = ctx.channelPost.caption;
-
-          const formattedCaption = await this.rewriter.rewriteTelegramHTML(caption);
-
-          await ctx.telegram.sendPhoto(
-            this.targetChannel,
-            _.last(photo).file_id,
-            {
-              caption: formattedCaption,
-              parse_mode: "HTML",
-            }
-          );
-        } else if (ctx.channelPost.text) {
-          const formattedText = await this.rewriter.rewriteTelegramHTML(
-            toHTML(ctx.channelPost)
-          );
-          await ctx.telegram.sendMessage(this.targetChannel, formattedText, {
-            parse_mode: "HTML",
-          });
-        }
-      },
+      onUserStartBot: this.onUserStartBot.bind(this),
+      onBotChatMessage: this.onBotChatMessage.bind(this),
+      onTrackedChannelPost: this.onTrackedChannelPost.bind(this),
     });
+  }
+
+  private onUserStartBot(ctx: Context) {
+    ctx.reply("Welcome");
+  }
+
+  private onBotChatMessage(ctx: Context) {
+    ctx.reply("Message received");
+  }
+
+  private async onTrackedChannelPost(ctx: any) {
+    if (ctx.channelPost.media_group_id) {
+      this.onTrackedChannelMediaGroupPost(ctx);
+    } else if (ctx.channelPost.photo) {
+      this.onTrackedChannelSinglePhotoPost(ctx);
+    } else if (ctx.channelPost.text) {
+      this.onTrackedChannelTextPost(ctx);
+    }
+  }
+
+  private async onTrackedChannelTextPost(ctx: any) {
+    const formattedText = await this.rewriter.rewriteTelegramHTML(
+      toHTML(ctx.channelPost)
+    );
+
+    await ctx.telegram.sendMessage(this.targetChannel, formattedText, {
+      parse_mode: "HTML",
+    });
+  }
+
+  private async onTrackedChannelSinglePhotoPost(ctx: any) {
+    const photo = ctx.channelPost.photo as [{ file_id: string }];
+    const caption = ctx.channelPost.caption;
+
+    const formattedCaption = await this.rewriter.rewriteTelegramHTML(caption);
+
+    await ctx.telegram.sendPhoto(this.targetChannel, _.last(photo).file_id, {
+      caption: formattedCaption,
+      parse_mode: "HTML",
+    });
+  }
+
+  private async onTrackedChannelMediaGroupPost(ctx: any) {
+    const mediaGroupID = ctx.channelPost.media_group_id;
+    if (!this.mediaGroupStore[mediaGroupID]) {
+      const mediaGroupStore = this.mediaGroupStore;
+      const targetChannel = this.targetChannel;
+
+      mediaGroupStore[mediaGroupID] = {
+        data: [],
+        publish: _.debounce(async function () {
+          try {
+            await ctx.telegram.sendMediaGroup(targetChannel, this.data);
+          } catch (error) {
+            console.error("error", error);
+            console.error("Media group data", this.data);
+          } finally {
+            delete mediaGroupStore[mediaGroupID];
+          }
+        }, 1000),
+      };
+    }
+
+    const highestQualityPhoto = _.last(
+      ctx.channelPost.photo as [{ file_id: string }]
+    );
+    const mediaGroupItem = {
+      type: "photo",
+      media: highestQualityPhoto.file_id,
+    };
+
+    const formattedCaption = await this.rewriter.rewriteTelegramHTML(
+      ctx.channelPost.caption
+    );
+    if (formattedCaption) {
+      mediaGroupItem["caption"] = formattedCaption;
+      mediaGroupItem["parse_mode"] = "HTML";
+    }
+
+    this.mediaGroupStore[mediaGroupID].data.push(mediaGroupItem);
+
+    await this.mediaGroupStore[mediaGroupID].publish();
   }
 }
 
