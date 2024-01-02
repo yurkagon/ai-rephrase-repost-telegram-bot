@@ -41,6 +41,8 @@ class App {
       this.onTrackedChannelMediaGroupPost(ctx);
     } else if (ctx.channelPost.photo) {
       this.onTrackedChannelSinglePhotoPost(ctx);
+    } else if (ctx.channelPost.video) {
+      this.onTrackedChannelSingleVideoPost(ctx);
     } else if (ctx.channelPost.text) {
       this.onTrackedChannelTextPost(ctx);
     }
@@ -63,6 +65,18 @@ class App {
     const formattedCaption = await this.rewriter.rewriteTelegramHTML(caption);
 
     await ctx.telegram.sendPhoto(this.targetChannel, _.last(photo).file_id, {
+      caption: formattedCaption,
+      parse_mode: "HTML",
+    });
+  }
+
+  private async onTrackedChannelSingleVideoPost(ctx: any) {
+    const video = ctx.channelPost.video;
+    const caption = ctx.channelPost.caption || "";
+
+    const formattedCaption = await this.rewriter.rewriteTelegramHTML(caption);
+
+    await ctx.telegram.sendVideo(this.targetChannel, video.file_id, {
       caption: formattedCaption,
       parse_mode: "HTML",
     });
