@@ -18,6 +18,7 @@
     "typescript": "^5.3.3"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.202",
     "@types/node": "^20.10.6"
   }
 }
