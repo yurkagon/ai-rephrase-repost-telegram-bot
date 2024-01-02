@@ -3,12 +3,12 @@
       "lib": ["ES2022"],
       "module": "node16",
       "target": "es2022",
-
       "strict": true,
       "esModuleInterop": true,
       "skipLibCheck": true,
       "forceConsistentCasingInFileNames": true,
       "moduleResolution": "node16",
-      "noEmitOnError": false
+      "noEmitOnError": false,
+      "noImplicitAny": false
     }
   }
