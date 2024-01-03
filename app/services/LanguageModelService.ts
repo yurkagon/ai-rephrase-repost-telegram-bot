@@ -15,9 +15,9 @@ class LanguageModelService {
 
   public static async sendMessage(
     message: string,
-    { parentMessageId }: { parentMessageId?: string } = {}
+    { systemMessage }: { systemMessage?: string } = {}
   ) {
-    const res = await this.api.sendMessage(message, { parentMessageId });
+    const res = await this.api.sendMessage(message, { systemMessage });
 
     return res;
   }
