@@ -4,6 +4,7 @@ import _ from "lodash";
 
 import TelegramBot from "./libs/TelegramBot";
 import TextRewriter from "./libs/TextRewriter";
+import LanguageModelService from "./services/LanguageModelService";
 
 class App {
   private readonly targetChannel: string = "@test_yuragon";
@@ -13,6 +14,7 @@ class App {
     {
       data: any[];
       publish: () => Promise<void>;
+      isUploadingFinished: boolean;
     }
   > = {};
 
@@ -20,6 +22,8 @@ class App {
   private rewriter = new TextRewriter();
 
   public async run() {
+    await LanguageModelService.init();
+
     this.bot.init({
       targetChannel: this.targetChannel,
       onUserStartBot: this.onUserStartBot.bind(this),
@@ -90,6 +94,7 @@ class App {
 
       mediaGroupStore[mediaGroupID] = {
         data: [],
+        isUploadingFinished: false,
         publish: _.debounce(async function () {
           try {
             await ctx.telegram.sendMediaGroup(targetChannel, this.data);
@@ -97,18 +102,17 @@ class App {
             console.error("error", error);
             console.error("Media group data", this.data);
           } finally {
-            delete mediaGroupStore[mediaGroupID];
+            this.isUploadingFinished = true;
           }
         }, 1000),
       };
     }
 
-    const highestQualityPhoto = _.last(
-      ctx.channelPost.photo as [{ file_id: string }]
-    );
     const mediaGroupItem = {
       type: "photo",
-      media: highestQualityPhoto.file_id,
+      media: _.last(
+        ctx.channelPost.photo as [{ file_id: string }]
+      ).file_id,
     };
 
     const formattedCaption = await this.rewriter.rewriteTelegramHTML(
@@ -119,9 +123,11 @@ class App {
       mediaGroupItem["parse_mode"] = "HTML";
     }
 
-    this.mediaGroupStore[mediaGroupID].data.push(mediaGroupItem);
+    if (!this.mediaGroupStore[mediaGroupID].isUploadingFinished) {
+      this.mediaGroupStore[mediaGroupID].data.push(mediaGroupItem);
 
-    await this.mediaGroupStore[mediaGroupID].publish();
+      await this.mediaGroupStore[mediaGroupID].publish();
+    }
   }
 }
 
