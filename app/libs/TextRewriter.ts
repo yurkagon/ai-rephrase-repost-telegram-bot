@@ -6,7 +6,6 @@ class TextRewriter {
   public async rewriteTelegramHTML(text: string): Promise<string> {
     if (!this.isValidText(text)) return "";
 
-    return text;
 
     const parentMessageId = await this.getParentMessageId();
 

@@ -95,39 +95,38 @@ class App {
       mediaGroupStore[mediaGroupID] = {
         data: [],
         isUploadingFinished: false,
-        publish: _.debounce(async function () {
+        publish: _.debounce(async () => {
           try {
-            await ctx.telegram.sendMediaGroup(targetChannel, this.data);
-          } catch (error) {
-            console.error("error", error);
-            console.error("Media group data", this.data);
+            const data = await Promise.all(
+              mediaGroupStore[mediaGroupID].data.map(async (item) => {
+                const formattedCaption =
+                  await this.rewriter.rewriteTelegramHTML(item.caption);
+
+                return {
+                  ...item,
+                  caption: formattedCaption,
+                };
+              })
+            );
+
+            await ctx.telegram.sendMediaGroup(targetChannel, data);
+          } catch {
           } finally {
-            this.isUploadingFinished = true;
+            mediaGroupStore[mediaGroupID].isUploadingFinished = true;
           }
         }, 1000),
       };
     }
 
-    const mediaGroupItem = {
+    if (this.mediaGroupStore[mediaGroupID].isUploadingFinished) return;
+    this.mediaGroupStore[mediaGroupID].data.push({
       type: "photo",
-      media: _.last(
-        ctx.channelPost.photo as [{ file_id: string }]
-      ).file_id,
-    };
+      media: _.last(ctx.channelPost.photo as [{ file_id: string }]).file_id,
+      caption: ctx.channelPost.caption,
+      parse_mode: "HTML",
+    });
 
-    const formattedCaption = await this.rewriter.rewriteTelegramHTML(
-      ctx.channelPost.caption
-    );
-    if (formattedCaption) {
-      mediaGroupItem["caption"] = formattedCaption;
-      mediaGroupItem["parse_mode"] = "HTML";
-    }
-
-    if (!this.mediaGroupStore[mediaGroupID].isUploadingFinished) {
-      this.mediaGroupStore[mediaGroupID].data.push(mediaGroupItem);
-
-      await this.mediaGroupStore[mediaGroupID].publish();
-    }
+    await this.mediaGroupStore[mediaGroupID].publish();
   }
 }
 
