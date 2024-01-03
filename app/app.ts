@@ -127,10 +127,14 @@ class App {
     }
 
     if (this.mediaGroupStore[mediaGroupID].isUploadingFinished) return;
+
     this.mediaGroupStore[mediaGroupID].data.push({
       type: "photo",
       media: _.last(ctx.channelPost.photo as [{ file_id: string }]).file_id,
-      caption: ctx.channelPost.caption,
+      caption: toHTML({
+        caption: ctx.channelPost.caption,
+        caption_entities: ctx.channelPost.caption_entities,
+      }),
       parse_mode: "HTML",
     });
 
