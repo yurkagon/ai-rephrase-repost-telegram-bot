@@ -64,9 +64,13 @@ class App {
 
   private async onTrackedChannelSinglePhotoPost(ctx: any) {
     const photo = ctx.channelPost.photo as [{ file_id: string }];
-    const caption = ctx.channelPost.caption;
 
-    const formattedCaption = await this.rewriter.rewriteTelegramHTML(caption);
+    const formattedCaption = await this.rewriter.rewriteTelegramHTML(
+      toHTML({
+        caption: ctx.channelPost.caption,
+        caption_entities: ctx.channelPost.caption_entities,
+      })
+    );
 
     await ctx.telegram.sendPhoto(this.targetChannel, _.last(photo).file_id, {
       caption: formattedCaption,
