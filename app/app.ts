@@ -80,9 +80,13 @@ class App {
 
   private async onTrackedChannelSingleVideoPost(ctx: any) {
     const video = ctx.channelPost.video;
-    const caption = ctx.channelPost.caption || "";
 
-    const formattedCaption = await this.rewriter.rewriteTelegramHTML(caption);
+    const formattedCaption = await this.rewriter.rewriteTelegramHTML(
+      toHTML({
+        caption: ctx.channelPost.caption,
+        caption_entities: ctx.channelPost.caption_entities,
+      })
+    );
 
     await ctx.telegram.sendVideo(this.targetChannel, video.file_id, {
       caption: formattedCaption,
