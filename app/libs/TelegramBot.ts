@@ -3,7 +3,7 @@ import { message } from "telegraf/filters";
 import _ from "lodash";
 
 class TelegramBot {
-  private instance = new Telegraf(process.env.TELEGRAM_BOT_API_TOKEN as string);
+  public instance = new Telegraf(process.env.TELEGRAM_BOT_API_TOKEN as string);
 
   private targetChannel: string;
 
@@ -29,6 +29,10 @@ class TelegramBot {
     });
 
     return this.instance.launch();
+  }
+
+  public get telegram() {
+    return this.instance.telegram;
   }
 }
 

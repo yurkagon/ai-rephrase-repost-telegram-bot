@@ -57,7 +57,7 @@ class App {
       toHTML(ctx.channelPost)
     );
 
-    await ctx.telegram.sendMessage(this.targetChannel, formattedText, {
+    await this.bot.telegram.sendMessage(this.targetChannel, formattedText, {
       parse_mode: "HTML",
     });
   }
@@ -72,7 +72,7 @@ class App {
       })
     );
 
-    await ctx.telegram.sendPhoto(this.targetChannel, _.last(photo).file_id, {
+    await this.bot.telegram.sendPhoto(this.targetChannel, _.last(photo).file_id, {
       caption: formattedCaption,
       parse_mode: "HTML",
     });
@@ -88,7 +88,7 @@ class App {
       })
     );
 
-    await ctx.telegram.sendVideo(this.targetChannel, video.file_id, {
+    await this.bot.telegram.sendVideo(this.targetChannel, video.file_id, {
       caption: formattedCaption,
       parse_mode: "HTML",
     });
@@ -117,7 +117,7 @@ class App {
               })
             );
 
-            await ctx.telegram.sendMediaGroup(targetChannel, data);
+            await this.bot.telegram.sendMediaGroup(targetChannel, data);
           } catch {
           } finally {
             mediaGroupStore[mediaGroupID].isUploadingFinished = true;
