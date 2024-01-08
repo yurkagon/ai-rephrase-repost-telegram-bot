@@ -14,15 +14,6 @@ class TelegramBot {
 
   private targetChannel: string;
 
-  private mediaGroupStore: Record<
-    string,
-    {
-      data: any[];
-      publish: () => Promise<void>;
-      isUploadingFinished: boolean;
-    }
-  > = {};
-
   public get telegram() {
     return this.instance.telegram;
   }
@@ -103,6 +94,14 @@ class TelegramBot {
     });
   }
 
+  private mediaGroupStore: Record<
+    string,
+    {
+      data: any[];
+      publish: () => Promise<void>;
+      isUploadingFinished: boolean;
+    }
+  > = {};
   private async copyMediaGroupMessage(message: Message, channelId: string) {
     const mediaGroupID = message.media_group_id;
     if (!this.mediaGroupStore[mediaGroupID]) {
@@ -136,14 +135,27 @@ class TelegramBot {
 
     if (this.mediaGroupStore[mediaGroupID].isUploadingFinished) return;
 
-    this.mediaGroupStore[mediaGroupID].data.push({
-      type: "photo",
-      media: _.last(message.photo).file_id,
+    const captionData = {
       caption: toHTML({
         caption: message.caption,
         caption_entities: message.caption_entities,
       }),
       parse_mode: "HTML",
+    };
+
+    const data = message.photo
+      ? {
+          type: "photo",
+          media: _.last(message.photo).file_id,
+        }
+      : {
+          type: "video",
+          media: message.video.file_id,
+        };
+
+    this.mediaGroupStore[mediaGroupID].data.push({
+      ...data,
+      ...captionData,
     });
 
     await this.mediaGroupStore[mediaGroupID].publish();
