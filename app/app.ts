@@ -6,6 +6,9 @@ import TelegramBot, { Message } from "./libs/TelegramBot";
 import TextRewriter from "./libs/TextRewriter";
 import LanguageModelService from "./services/LanguageModelService";
 
+// const mongoose = require('mongoose');
+// mongoose.connect('mongodb+srv://admin:rW2gNRPgvDdH52u@airephraserepostbot.mxxkk4a.mongodb.net/db').then(() => console.log("DB connected"));
+
 class App {
   private readonly targetChannel: string = "@test_yuragon";
   private bot = new TelegramBot();
@@ -26,17 +29,19 @@ class App {
     ctx.reply("Welcome");
   }
 
-  private async onBotChatMessage(ctx: Context) {
-    ctx.reply("Making a copy...");
-
-    await this.bot.copyMessage(ctx.message as any, this.targetChannel);
-
-    ctx.reply("Done");
-  }
-
   private async onTrackedChannelPost(ctx: Context) {
     return this.bot.copyMessage(ctx.channelPost as any, this.targetChannel);
   }
+
+  private async onBotChatMessage(ctx: Context) {
+    // ctx.reply("Making a copy...");
+
+    // await this.bot.copyMessage(ctx.message as any, this.targetChannel);
+
+    // ctx.reply("Done");
+  }
+
+
 }
 
 const app = new App();

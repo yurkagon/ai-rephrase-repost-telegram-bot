@@ -13,6 +13,7 @@
     "chatgpt": "^5.2.5",
     "dotenv": "^16.3.1",
     "lodash": "^4.17.21",
+    "mongoose": "^8.0.3",
     "telegraf": "^4.15.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"

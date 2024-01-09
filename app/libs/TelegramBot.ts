@@ -30,6 +30,18 @@ class TelegramBot {
     onTrackedChannelPost: (ctx: Context) => any;
   }) {
     this.targetChannel = targetChannel;
+
+    this.instance.use((ctx, next) => {
+      if (ctx.message) {
+        console.log("message", ctx.message);
+      }
+
+      if (ctx.channelPost) {
+        console.log("channelPost", ctx.channelPost);
+      }
+
+      return next();
+    });
     this.instance.start(onUserStartBot);
     this.instance.on(message("text"), onBotChatMessage);
 
