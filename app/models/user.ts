@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-interface User extends Document {
+export interface User extends Document {
   _id: number;
 }
 
