@@ -3,18 +3,18 @@ import { Context } from "telegraf";
 import _ from "lodash";
 
 import TelegramBot, { Message } from "./libs/TelegramBot";
-import TextRewriter from "./libs/TextRewriter";
 import LanguageModelService from "./services/LanguageModelService";
+import DatabaseService from "./services/DatabaseService";
 
-// const mongoose = require('mongoose');
-// mongoose.connect('mongodb+srv://admin:rW2gNRPgvDdH52u@airephraserepostbot.mxxkk4a.mongodb.net/db').then(() => console.log("DB connected"));
+import TextRewriter from "./libs/TextRewriter";
 
 class App {
   private readonly targetChannel: string = "@test_yuragon";
   private bot = new TelegramBot();
-  // private rewriter = new TextRewriter();
+  private rewriter = new TextRewriter();
 
   public async run() {
+    await DatabaseService.connectDb().then(() => console.log("DB connected"));
     await LanguageModelService.init();
 
     this.bot.init({
@@ -30,18 +30,22 @@ class App {
   }
 
   private async onTrackedChannelPost(ctx: Context) {
-    return this.bot.copyMessage(ctx.channelPost as any, this.targetChannel);
+    return this.bot.copyMessage({
+      message: ctx.channelPost as any,
+      chatId: this.targetChannel,
+      updateText: async ({ html }) => {
+        const updatedHtml = await this.rewriter.rewriteTelegramHTML(html);
+
+        return updatedHtml;
+      }
+    });
   }
 
   private async onBotChatMessage(ctx: Context) {
     // ctx.reply("Making a copy...");
-
     // await this.bot.copyMessage(ctx.message as any, this.targetChannel);
-
     // ctx.reply("Done");
   }
-
-
 }
 
 const app = new App();

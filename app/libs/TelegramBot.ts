@@ -33,7 +33,8 @@ class TelegramBot {
 
     this.instance.use((ctx, next) => {
       if (ctx.message) {
-        console.log("message", ctx.message);
+        const userId = ctx.message.from.id;
+        console.log("message", ctx.message.from.id);
       }
 
       if (ctx.channelPost) {
@@ -54,53 +55,62 @@ class TelegramBot {
     return this.instance.launch();
   }
 
-  public async copyMessage(message: Message, channelId: string) {
-    if (message.media_group_id) {
-      await this.copyMediaGroupMessage(message, channelId);
-    } else if (message.photo) {
-      await this.copySinglePhotoMessage(message, channelId);
-    } else if (message.video) {
-      await this.copySingleVideoMessage(message, channelId);
-    } else if (message.text) {
-      await this.copyTextMessage(message, channelId);
+  public async copyMessage(data: MessageCopyData) {
+    if (data.message.media_group_id) {
+      await this.copyMediaGroupMessage(data);
+    } else if (data.message.photo) {
+      await this.copySinglePhotoMessage(data);
+    } else if (data.message.video) {
+      await this.copySingleVideoMessage(data);
+    } else if (data.message.text) {
+      await this.copyTextMessage(data);
     }
   }
 
-  private async copyTextMessage(message: Message, channelId: string) {
-    const formattedText = await this.rewriter.rewriteTelegramHTML(
-      toHTML(message)
-    );
+  private async copyTextMessage({
+    message,
+    chatId,
+    updateText,
+  }: MessageCopyData) {
+    const html = toHTML(message);
+    const formattedText = updateText ? await updateText({ html }) : html;
 
-    await this.telegram.sendMessage(channelId, formattedText, {
+    await this.telegram.sendMessage(chatId, formattedText, {
       parse_mode: "HTML",
     });
   }
 
-  private async copySinglePhotoMessage(message: Message, channelId: string) {
-    const formattedCaption = await this.rewriter.rewriteTelegramHTML(
-      toHTML({
-        caption: message.caption,
-        caption_entities: message.caption_entities,
-      })
-    );
+  private async copySinglePhotoMessage({
+    message,
+    chatId,
+    updateText,
+  }: MessageCopyData) {
+    const html = toHTML({
+      caption: message.caption,
+      caption_entities: message.caption_entities,
+    });
+    const formattedCaption = updateText ? await updateText({ html }) : html;
 
-    await this.telegram.sendPhoto(channelId, _.last(message.photo).file_id, {
+    await this.telegram.sendPhoto(chatId, _.last(message.photo).file_id, {
       caption: formattedCaption,
       parse_mode: "HTML",
     });
   }
 
-  private async copySingleVideoMessage(message: Message, channelId: string) {
+  private async copySingleVideoMessage({
+    message,
+    chatId,
+    updateText,
+  }: MessageCopyData) {
     const video = message.video;
 
-    const formattedCaption = await this.rewriter.rewriteTelegramHTML(
-      toHTML({
-        caption: message.caption,
-        caption_entities: message.caption_entities,
-      })
-    );
+    const html = toHTML({
+      caption: message.caption,
+      caption_entities: message.caption_entities,
+    });
+    const formattedCaption = updateText ? await updateText({ html }) : html;
 
-    await this.telegram.sendVideo(channelId, video.file_id, {
+    await this.telegram.sendVideo(chatId, video.file_id, {
       caption: formattedCaption,
       parse_mode: "HTML",
     });
@@ -114,7 +124,11 @@ class TelegramBot {
       isUploadingFinished: boolean;
     }
   > = {};
-  private async copyMediaGroupMessage(message: Message, channelId: string) {
+  private async copyMediaGroupMessage({
+    message,
+    chatId,
+    updateText,
+  }: MessageCopyData) {
     const mediaGroupID = message.media_group_id;
     if (!this.mediaGroupStore[mediaGroupID]) {
       const mediaGroupStore = this.mediaGroupStore;
@@ -126,8 +140,9 @@ class TelegramBot {
           try {
             const data = await Promise.all(
               mediaGroupStore[mediaGroupID].data.map(async (item) => {
-                const formattedCaption =
-                  await this.rewriter.rewriteTelegramHTML(item.caption);
+                const formattedCaption = updateText
+                  ? await updateText({ html: item.caption })
+                  : item.caption;
 
                 return {
                   ...item,
@@ -136,7 +151,7 @@ class TelegramBot {
               })
             );
 
-            await this.telegram.sendMediaGroup(channelId, data);
+            await this.telegram.sendMediaGroup(chatId, data);
           } catch {
           } finally {
             mediaGroupStore[mediaGroupID].isUploadingFinished = true;
@@ -175,5 +190,10 @@ class TelegramBot {
 }
 
 export type Message = UnionToIntersection<CommonMessageBundle>;
+export type MessageCopyData = {
+  message: Message;
+  chatId: string;
+  updateText?: ({ html }: { html: string }) => string | Promise<string>;
+};
 
 export default TelegramBot;
