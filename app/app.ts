@@ -4,7 +4,6 @@ import _ from "lodash";
 
 import TelegramBot, { Message } from "./libs/TelegramBot";
 import LanguageModelService from "./services/LanguageModelService";
-import DatabaseService from "./services/DatabaseService";
 
 import TextRewriter from "./libs/TextRewriter";
 
@@ -14,7 +13,6 @@ class App {
   private rewriter = new TextRewriter();
 
   public async run() {
-    await DatabaseService.connectDb().then(() => console.log("DB connected"));
     await LanguageModelService.init();
 
     this.bot.init({
