@@ -51,7 +51,7 @@ The project uses one `.env` file at the repository root. The API loads it throug
 
 The bot is implemented in two NestJS modules:
 
-- `apps/api/src/ai`: the LangChain model factory, system prompt, and `TextRewriterService` with strict structured output `{ html: string }`.
+- `apps/api/src/ai`: the LangChain model helper, fixed system/developer prompts, and `AiService.rewrite(text)` returning validated HTML. `AiService` creates its model once in the constructor, with strict structured output `{ html: string }` already attached to the `model` field.
 - `apps/api/src/telegram`: Telegram handlers and publishing for text, photos, videos, and photo/video albums.
 
 `AppModule` registers `TelegramModule.registerAsync()` with a factory that receives `ConfigService` and returns a `TelegramModuleOptions` object (`{ token: string }`). `TelegramService` receives these options through DI, creates Telegraf itself, and manages its handlers, polling, and shutdown.
@@ -71,7 +71,7 @@ Add these variables to the new application's local `.env`; the values in `_origi
 
 The bot preserves Ukrainian wording, translates other languages, preserves HTML and meaningful links, and removes only the trailing source signature except YouTube links. `/start` replies with `Welcome` without accessing an application account. Posts from the destination channel are ignored.
 
-OpenAI uses the Responses API with low reasoning effort, a 30-second timeout per request, and at most two retries for transient transport failures. Refusals, incomplete responses, invalid structured output, and empty results prevent publication, without falling back to the original text. Every album caption is prepared before sending the album; a failure in any caption skips the entire album. Media without a caption makes no AI request.
+Each rewrite sends the fixed system prompt, developer prompt, and the post as a user message. LangChain maps the system role to developer for `gpt-6-luna`, so the request roles are developer, developer, user. OpenAI uses the Responses API with low reasoning effort, a 30-second timeout per request, and at most two retries for transient transport failures. Refusals, incomplete responses, invalid structured output, and empty results prevent publication, without falling back to the original text. Every album caption is prepared before sending the album; a failure in any caption skips the entire album. Media without a caption makes no AI request.
 
 NestJS starts polling in the background so it does not block the HTTP server. A fatal polling error shuts down the shared process; individual post errors are logged and processing continues. Shutdown hooks stop polling and cancel pending album timers. Logs contain operation metadata and error types, not post content, AI responses, or credentials.
 

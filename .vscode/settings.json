@@ -1,6 +1,4 @@
 {
   "css.lint.unknownAtRules": "ignore",
-  "cSpell.words": [
-    "Pressable"
-  ]
+  "cSpell.words": ["Pressable", "langchain"]
 }

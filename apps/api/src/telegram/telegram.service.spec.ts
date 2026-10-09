@@ -3,8 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { Telegram } from 'telegraf';
 import type { Message } from 'telegraf/types';
-import { TextRewriterService } from '@/ai/text-rewriter.service';
-import { createLanguageModel } from '@/ai/model';
+import { AiService } from '@/ai/ai.service';
 import { TelegramService } from './telegram.service';
 import { TELEGRAM_OPTIONS } from './telegram.options';
 
@@ -49,12 +48,8 @@ function video(caption?: string, media_group_id?: string): Message.VideoMessage 
 async function setup(targetChannel = '@target', realRewriter = false) {
   const rewrite = jest.fn().mockResolvedValue('<b>Привіт</b>');
   const rewriter = realRewriter
-    ? new TextRewriterService(
-        createLanguageModel(
-          new ConfigService({ OPENAI_API_KEY: 'test-key', LLM_MODEL: 'gpt-6-luna' }),
-        ),
-      )
-    : { rewriteTelegramHTML: rewrite };
+    ? new AiService(new ConfigService({ OPENAI_API_KEY: 'test-key', LLM_MODEL: 'gpt-6-luna' }))
+    : { rewrite: rewrite };
   const module = await Test.createTestingModule({
     providers: [
       TelegramService,
@@ -65,7 +60,7 @@ async function setup(targetChannel = '@target', realRewriter = false) {
           TARGET_CHANNEL: targetChannel,
         }),
       },
-      { provide: TextRewriterService, useValue: rewriter },
+      { provide: AiService, useValue: rewriter },
     ],
   }).compile();
   const bot = module.get(TelegramService);

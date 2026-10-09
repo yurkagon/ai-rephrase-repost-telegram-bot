@@ -2,7 +2,7 @@ import { Logger } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { Telegram, Telegraf } from 'telegraf';
-import { TextRewriterService } from '@/ai/text-rewriter.service';
+import { AiService } from '@/ai/ai.service';
 import { TelegramModule, type TelegramModuleOptions } from './telegram.module';
 import { TelegramService } from './telegram.service';
 
@@ -50,7 +50,7 @@ it('resolves the Telegram and AI graph without auth, users, Prisma or Redis', as
   expect(module.get(TelegramService)).toBeInstanceOf(TelegramService);
   expect(module.get(TelegramService).instance).toBeInstanceOf(Telegraf);
   expect(() => module.get(Telegraf)).toThrow();
-  expect(module.get(TextRewriterService)).toBeInstanceOf(TextRewriterService);
+  expect(module.get(AiService)).toBeInstanceOf(AiService);
   await module.close();
   expect(globalThis.fetch).not.toHaveBeenCalled();
   expect(api).not.toHaveBeenCalled();

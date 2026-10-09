@@ -1,22 +1,24 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
-import { AI_MODEL } from './model';
-import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { Environment } from '@/config/env.schema';
+import { createLanguageModel } from './model';
 import type { BaseLanguageModelInput } from '@langchain/core/language_models/base';
-import { BaseMessage, HumanMessage, SystemMessage, isAIMessage } from '@langchain/core/messages';
+import {
+  AIMessage,
+  BaseMessage,
+  ChatMessage,
+  HumanMessage,
+  SystemMessage,
+} from '@langchain/core/messages';
 import type { Runnable } from '@langchain/core/runnables';
 import { z } from 'zod';
-import { rewritePrompt } from './prompt';
-
-const rewriteSchema = z.strictObject({
-  html: z.string().describe('The final Ukrainian Telegram post with its original HTML formatting.'),
-});
-type RewriteOutput = z.infer<typeof rewriteSchema>;
+import { systemPrompt, developerPrompt } from './prompt';
 
 @Injectable()
-export class TextRewriterService {
-  private readonly logger = new Logger(TextRewriterService.name);
+export class AiService {
+  private readonly logger = new Logger(AiService.name);
   private readonly modelName: string;
-  private readonly structuredModel: Runnable<
+  private readonly model: Runnable<
     BaseLanguageModelInput,
     {
       raw: BaseMessage;
@@ -24,13 +26,14 @@ export class TextRewriterService {
     }
   >;
 
-  constructor(@Inject(AI_MODEL) model: BaseChatModel) {
+  constructor(config: ConfigService<Environment>) {
+    const model = createLanguageModel(config);
     const params: unknown = model.invocationParams();
     this.modelName =
       params && typeof params === 'object' && 'model' in params && typeof params.model === 'string'
         ? params.model
         : model.getName();
-    this.structuredModel = model.withStructuredOutput<RewriteOutput>(rewriteSchema, {
+    this.model = model.withStructuredOutput<RewriteOutput>(rewriteSchema, {
       name: 'telegram_rewrite',
       method: 'jsonSchema',
       strict: true,
@@ -38,15 +41,16 @@ export class TextRewriterService {
     });
   }
 
-  public async rewriteTelegramHTML(text: string): Promise<string> {
+  public async rewrite(text: string): Promise<string> {
     if (text.trim().length < 2) return '';
 
     const startedAt = Date.now();
     let raw: BaseMessage | undefined;
     let outcome = 'provider_error';
     try {
-      const response = await this.structuredModel.invoke([
-        new SystemMessage(rewritePrompt),
+      const response = await this.model.invoke([
+        new SystemMessage(systemPrompt),
+        new ChatMessage({ role: 'developer', content: developerPrompt }),
         new HumanMessage(text),
       ]);
       raw = response.raw;
@@ -90,9 +94,14 @@ export class TextRewriterService {
         event: 'AI rewrite',
         model: this.modelName,
         durationMs: Date.now() - startedAt,
-        tokens: raw && isAIMessage(raw) ? raw.usage_metadata : undefined,
+        tokens: AIMessage.isInstance(raw) ? raw.usage_metadata : undefined,
         outcome,
       });
     }
   }
 }
+
+const rewriteSchema = z.strictObject({
+  html: z.string().describe('The final Ukrainian Telegram post with its original HTML formatting.'),
+});
+type RewriteOutput = z.infer<typeof rewriteSchema>;

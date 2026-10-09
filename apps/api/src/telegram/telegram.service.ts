@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Environment } from '@/config/env.schema';
-import { TextRewriterService } from '@/ai/text-rewriter.service';
+import { AiService } from '@/ai/ai.service';
 import { Telegraf } from 'telegraf';
 import type { Message, InputMediaPhoto, InputMediaVideo } from 'telegraf/types';
 import { debounce } from 'lodash';
@@ -43,7 +43,7 @@ export class TelegramService
 
   constructor(
     config: ConfigService<Environment>,
-    private readonly rewriter: TextRewriterService,
+    private readonly rewriter: AiService,
     @Inject(TELEGRAM_OPTIONS) options: TelegramModuleOptions,
   ) {
     this.instance = new Telegraf(options.token);
@@ -116,7 +116,7 @@ export class TelegramService
       }
 
       const html = toHTML(message);
-      const caption = await this.rewriter.rewriteTelegramHTML(html);
+      const caption = await this.rewriter.rewrite(html);
       if (this.stopping) return;
       const options = { caption, parse_mode: 'HTML' as const };
       if ('photo' in message) {
@@ -126,7 +126,7 @@ export class TelegramService
       }
     } else if ('text' in message) {
       const html = toHTML(message);
-      const text = await this.rewriter.rewriteTelegramHTML(html);
+      const text = await this.rewriter.rewrite(html);
       if (text && !this.stopping)
         await this.telegram.sendMessage(chatId, text, { parse_mode: 'HTML' });
     }
@@ -180,7 +180,7 @@ export class TelegramService
       const data = await Promise.all(
         media.map(async (item) => ({
           ...item,
-          caption: await this.rewriter.rewriteTelegramHTML(item.caption ?? ''),
+          caption: await this.rewriter.rewrite(item.caption ?? ''),
         })),
       );
       if (!this.stopping) await this.telegram.sendMediaGroup(this.targetChannel, data);

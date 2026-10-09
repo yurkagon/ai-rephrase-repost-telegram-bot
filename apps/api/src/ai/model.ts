@@ -1,12 +1,11 @@
 import { ChatOpenAI, OpenAIClient } from '@langchain/openai';
 import { getRetryable } from '@langchain/core/errors';
 import { ConfigService } from '@nestjs/config';
+import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 
 import type { Environment } from '@/config/env.schema';
 
-export const AI_MODEL = Symbol('AI_MODEL');
-
-export function createLanguageModel(config: ConfigService<Environment>) {
+export function createLanguageModel(config: ConfigService<Environment>): BaseChatModel {
   const apiKey = config.getOrThrow('OPENAI_API_KEY', { infer: true });
   const model = config.getOrThrow('LLM_MODEL', { infer: true });
   return new ChatOpenAI({
