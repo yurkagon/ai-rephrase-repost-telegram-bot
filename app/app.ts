@@ -1,51 +1,28 @@
-import { Context } from "telegraf";
+import type { Context } from "telegraf";
+import type { Update } from "telegraf/types";
+import TelegramBot from "./libs/TelegramBot";
+import TextRewriter from "./ai/TextRewriter";
 
-import _ from "lodash";
+export default class App {
+  constructor(
+    private readonly bot: TelegramBot,
+    private readonly rewriter: TextRewriter,
+    private readonly targetChannel: string,
+  ) {}
 
-import TelegramBot, { Message } from "./libs/TelegramBot";
-import LanguageModelService from "./services/LanguageModelService";
-
-import TextRewriter from "./libs/TextRewriter";
-
-class App {
-  private readonly targetChannel: string = "@test_yuragon";
-  private bot = new TelegramBot();
-  private rewriter = new TextRewriter();
-
-  public async run() {
-    LanguageModelService.init();
-
-    this.bot.init({
+  public run(): Promise<void> {
+    return this.bot.init({
       targetChannel: this.targetChannel,
-      onUserStartBot: this.onUserStartBot.bind(this),
-      onBotChatMessage: this.onBotChatMessage.bind(this),
-      onTrackedChannelPost: this.onTrackedChannelPost.bind(this),
+      onUserStartBot: (ctx) => ctx.reply("Welcome"),
+      onTrackedChannelPost: (ctx) => this.onTrackedChannelPost(ctx),
     });
   }
 
-  private onUserStartBot(ctx: Context) {
-    ctx.reply("Welcome");
-  }
-
-  private async onTrackedChannelPost(ctx: Context) {
+  private onTrackedChannelPost(ctx: Context<Update.ChannelPostUpdate>): Promise<void> {
     return this.bot.copyMessage({
-      message: ctx.channelPost as any,
+      message: ctx.channelPost,
       chatId: this.targetChannel,
-      updateText: async ({ html }) => {
-        const updatedHtml = await this.rewriter.rewriteTelegramHTML(html);
-
-        return updatedHtml;
-      }
+      updateText: ({ html }) => this.rewriter.rewriteTelegramHTML(html),
     });
-  }
-
-  private async onBotChatMessage(ctx: Context) {
-    // ctx.reply("Making a copy...");
-    // await this.bot.copyMessage(ctx.message as any, this.targetChannel);
-    // ctx.reply("Done");
   }
 }
-
-const app = new App();
-
-app.run().then(() => console.log("App is running"));
