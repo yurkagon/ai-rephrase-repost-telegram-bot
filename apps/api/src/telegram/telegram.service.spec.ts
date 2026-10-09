@@ -6,6 +6,7 @@ import type { Message } from 'telegraf/types';
 import { TextRewriterService } from '@/ai/text-rewriter.service';
 import { createLanguageModel } from '@/ai/model';
 import { TelegramService } from './telegram.service';
+import { TELEGRAM_OPTIONS } from './telegram.options';
 
 const common = {
   message_id: 1,
@@ -57,10 +58,10 @@ async function setup(targetChannel = '@target', realRewriter = false) {
   const module = await Test.createTestingModule({
     providers: [
       TelegramService,
+      { provide: TELEGRAM_OPTIONS, useValue: { token: 'test-token' } },
       {
         provide: ConfigService,
         useValue: new ConfigService({
-          TELEGRAM_BOT_API_TOKEN: 'test-token',
           TARGET_CHANNEL: targetChannel,
         }),
       },

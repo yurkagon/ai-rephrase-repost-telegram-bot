@@ -1,4 +1,10 @@
-import { Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+  OnApplicationShutdown,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Environment } from '@/config/env.schema';
 import { TextRewriterService } from '@/ai/text-rewriter.service';
@@ -7,6 +13,7 @@ import type { Message, InputMediaPhoto, InputMediaVideo } from 'telegraf/types';
 import { debounce } from 'lodash';
 import type { DebouncedFunc } from 'lodash';
 import { toHTML } from '@telegraf/entity';
+import { TELEGRAM_OPTIONS, type TelegramModuleOptions } from './telegram.options';
 
 type AlbumMedia = InputMediaPhoto | InputMediaVideo;
 type MediaMessage = Message.PhotoMessage | Message.VideoMessage;
@@ -30,10 +37,13 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
   constructor(
     config: ConfigService<Environment>,
     private readonly rewriter: TextRewriterService,
+    @Inject(TELEGRAM_OPTIONS) options: TelegramModuleOptions,
   ) {
-    const token = config.getOrThrow('TELEGRAM_BOT_API_TOKEN', { infer: true });
+    this.instance = new Telegraf(options.token);
     this.targetChannel = config.getOrThrow('TARGET_CHANNEL', { infer: true });
-    this.instance = new Telegraf(token);
+  }
+
+  public onModuleInit(): void {
     this.instance.catch((error, ctx) => {
       this.logger.error({
         event: 'Telegram update failed',
@@ -41,7 +51,9 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
         error: error instanceof Error ? error.name : 'UnknownError',
       });
     });
+
     this.instance.start((ctx) => ctx.reply('Welcome'));
+
     this.instance.on('channel_post', async (ctx) => {
       if (
         this.stopping ||
@@ -58,7 +70,6 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
   }
 
   public onApplicationBootstrap(): void {
-    // launch() resolves when polling stops, so it must not block Nest's HTTP startup.
     void this.instance
       .launch(() => {
         if (this.stopping) throw new Error('Telegram startup cancelled by shutdown.');

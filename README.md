@@ -54,6 +54,8 @@ The bot is implemented in two NestJS modules:
 - `apps/api/src/ai`: the LangChain model factory, system prompt, and `TextRewriterService` with strict structured output `{ html: string }`.
 - `apps/api/src/telegram`: Telegram handlers and publishing for text, photos, videos, and photo/video albums.
 
+`AppModule` registers `TelegramModule.registerAsync()` with a factory that receives `ConfigService` and returns a `TelegramModuleOptions` object (`{ token: string }`). `TelegramService` receives these options through DI, creates Telegraf itself, and manages its handlers, polling, and shutdown.
+
 `TelegramModule` imports `AiModule`; neither depends on auth, users, Prisma, or Redis. The existing API still uses PostgreSQL and Redis as before. No Telegram-to-account associations or database migrations are introduced. `_original` remains the reference copy and is not loaded at runtime.
 
 Bot settings use the same validated `ConfigService`:

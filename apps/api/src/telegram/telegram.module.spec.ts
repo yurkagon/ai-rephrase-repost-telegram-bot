@@ -1,9 +1,9 @@
 import { Logger } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-import { Telegram } from 'telegraf';
+import { Telegram, Telegraf } from 'telegraf';
 import { TextRewriterService } from '@/ai/text-rewriter.service';
-import { TelegramModule } from './telegram.module';
+import { TelegramModule, type TelegramModuleOptions } from './telegram.module';
 import { TelegramService } from './telegram.service';
 
 async function compile(
@@ -11,6 +11,11 @@ async function compile(
     TELEGRAM_BOT_API_TOKEN: 'test-token',
     OPENAI_API_KEY: 'test-key',
   },
+  createConfig: (
+    config: ConfigService,
+  ) => TelegramModuleOptions | Promise<TelegramModuleOptions> = (config) => ({
+    token: config.getOrThrow<string>('TELEGRAM_BOT_API_TOKEN'),
+  }),
 ) {
   return Test.createTestingModule({
     imports: [
@@ -22,7 +27,7 @@ async function compile(
           () => ({ LLM_MODEL: 'gpt-6-luna', TARGET_CHANNEL: '@test_yuragon', ...credentials }),
         ],
       }),
-      TelegramModule,
+      TelegramModule.registerAsync({ inject: [ConfigService], useFactory: createConfig }),
     ],
   }).compile();
 }
@@ -43,10 +48,30 @@ afterEach(() => jest.restoreAllMocks());
 it('resolves the Telegram and AI graph without auth, users, Prisma or Redis', async () => {
   const module = await compile();
   expect(module.get(TelegramService)).toBeInstanceOf(TelegramService);
+  expect(module.get(TelegramService).instance).toBeInstanceOf(Telegraf);
+  expect(() => module.get(Telegraf)).toThrow();
   expect(module.get(TextRewriterService)).toBeInstanceOf(TextRewriterService);
   await module.close();
   expect(globalThis.fetch).not.toHaveBeenCalled();
   expect(api).not.toHaveBeenCalled();
+});
+
+it('creates its bot from the config returned by an injected async factory', async () => {
+  const createConfig = jest.fn((config: ConfigService) => {
+    expect(config.getOrThrow<string>('TELEGRAM_BOT_API_TOKEN')).toBe('test-token');
+    return Promise.resolve({ token: 'provided-token' });
+  });
+  const module = await compile(undefined, createConfig);
+  const instance = module.get(TelegramService).instance;
+  expect(instance).toBeInstanceOf(Telegraf);
+  expect(instance.telegram.token).toBe('provided-token');
+  expect(createConfig).toHaveBeenCalledTimes(1);
+  await module.close();
+});
+
+it('propagates config factory errors during initialization', async () => {
+  const error = new Error('Config factory failed');
+  await expect(compile(undefined, () => Promise.reject(error))).rejects.toBe(error);
 });
 
 it.each([
