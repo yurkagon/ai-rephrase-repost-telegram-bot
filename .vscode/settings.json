@@ -1,5 +1,6 @@
 {
-    "cSpell.words": [
-        "GPTAPI"
-    ]
+  "css.lint.unknownAtRules": "ignore",
+  "cSpell.words": [
+    "Pressable"
+  ]
 }

@@ -1,33 +1,51 @@
 {
-  "name": "ai-rephrase-repost-telegram-bot",
-  "version": "0.1.0",
-  "description": "",
-  "scripts": {
-    "start": "tsx app/index.ts",
-    "dev": "nodemon",
-    "test": "tsx --test tests/*.test.ts",
-    "typecheck": "tsc --noEmit"
+  "name": "nestjs-prisma-react-starter",
+  "version": "0.0.1",
+  "private": true,
+  "author": "Yurii Khvyshchuk",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
   },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@langchain/core": "^1.2.17",
-    "@langchain/openai": "^1.6.2",
-    "@telegraf/entity": "^0.7.0",
-    "dotenv": "^18.0.6",
-    "lodash": "^4.18.1",
-    "telegraf": "^4.16.3",
-    "tsx": "^4.23.15",
-    "typescript": "^7.0.2",
-    "zod": "^4.6.5"
+  "scripts": {
+    "setup": "pnpm db:up && pnpm db:migrate && pnpm db:generate && pnpm db:seed",
+    "dev": "concurrently -n api,client -c cyan,magenta \"pnpm dev:api\" \"pnpm dev:client\"",
+    "dev:api": "pnpm --filter api dev",
+    "dev:client": "pnpm --filter client dev",
+    "build": "pnpm db:generate && pnpm -r build",
+    "start:prod": "pnpm --filter api start:prod",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm --filter client typecheck && pnpm --filter api typecheck",
+    "test": "pnpm db:generate && pnpm --filter api test --runInBand",
+    "db:generate": "pnpm --filter api db:generate",
+    "db:migrate": "pnpm --filter api db:migrate",
+    "db:deploy": "pnpm --filter api db:deploy",
+    "db:view": "pnpm --filter api db:view",
+    "db:seed": "pnpm --filter api db:seed",
+    "db:up": "docker compose --project-name nestjs-starter up --wait -d postgres redis",
+    "db:down": "docker compose --project-name nestjs-starter down",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "prepare": "node -e \"if (process.env.HUSKY !== '0' && process.env.NODE_ENV !== 'production') require('child_process').execFileSync('husky', { stdio: 'inherit' })\"",
+    "lint:api": "pnpm --filter api lint",
+    "lint:client": "pnpm --filter client lint"
   },
   "devDependencies": {
-    "@types/lodash": "^4.17.25",
-    "@types/node": "^24.19.1",
-    "nodemon": "^3.1.14",
-    "typegram": "^5.2.0"
+    "concurrently": "^9.2.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "prettier": "^3.9.6"
   },
-  "engines": {
-    "node": "24.x"
+  "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
+  "lint-staged": {
+    "*.{json,md,yml,yaml}": "prettier --write",
+    "apps/api/**/*.ts": [
+      "prettier --write",
+      "bash -c 'cd apps/api && ./node_modules/.bin/eslint --fix --no-warn-ignored \"$@\"' _"
+    ],
+    "apps/client/**/*.{ts,tsx}": [
+      "prettier --write",
+      "bash -c 'cd apps/client && ./node_modules/.bin/eslint --fix --no-warn-ignored \"$@\"' _"
+    ],
+    "packages/**/*.ts": "prettier --write"
   }
 }

@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Compiled output
+dist/
+build/
+*.tsbuildinfo
+
+# Prisma generated client
+generated/prisma/
+
+# Env
+.env
+.env.*
+!.env.sample
+
+# Tests
+coverage/
+.nyc_output/
+
+# Temp
+.temp
+.tmp

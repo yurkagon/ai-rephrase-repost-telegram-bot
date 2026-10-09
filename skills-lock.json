@@ -1,41 +1,37 @@
 {
   "version": 1,
   "skills": {
-    "ponytail": {
-      "source": "DietrichGebert/ponytail",
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "ref": "d631a8827f99414d2b6daba4ef08b7f8701751d7",
       "sourceType": "github",
-      "skillPath": "skills/ponytail/SKILL.md",
-      "computedHash": "99f0589e5646b46da07b9419a5daa178004b3dd8930fec528918a51ab07f5efc"
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "17cdd9dbf37138d5f22950d1e55b0732a27435098238ad07a962e28fc0b16a69"
     },
-    "ponytail-audit": {
-      "source": "DietrichGebert/ponytail",
-      "sourceType": "github",
-      "skillPath": "skills/ponytail-audit/SKILL.md",
-      "computedHash": "1d718f893dabc01caad0dacef86444b5b4b3e1e59409527d66e8b5dd0cd85ae0"
+    "nestjs-best-practices": {
+      "source": "kadajett/agent-nestjs-skills",
+      "sourceType": "autoskills-registry",
+      "computedHash": "7f14f088a79090183152c2aa556f708b2f5b7d0dacfb0ad339df2d498ba52aa3"
     },
-    "ponytail-debt": {
-      "source": "DietrichGebert/ponytail",
-      "sourceType": "github",
-      "skillPath": "skills/ponytail-debt/SKILL.md",
-      "computedHash": "cb56e9f1606257dcbbe196197dffa0cb0e0ea136ad98c7eb44a85bd858b51e38"
+    "nodejs-best-practices": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "autoskills-registry",
+      "computedHash": "7361ab02fb6b09913e3bdd9cf61c629ed6c17de9485e6a781054e5d437ccfc29"
     },
-    "ponytail-gain": {
-      "source": "DietrichGebert/ponytail",
-      "sourceType": "github",
-      "skillPath": "skills/ponytail-gain/SKILL.md",
-      "computedHash": "725571b5c159e6504e0a2b337d7e2a9917e22ab87809f182059c2f2562ec9657"
+    "prisma-cli": {
+      "source": "prisma/skills",
+      "sourceType": "autoskills-registry",
+      "computedHash": "d2b4e410bb24df07e0a399cf1fd70ca6a2f696079f7e6445eb602116566d2278"
     },
-    "ponytail-help": {
-      "source": "DietrichGebert/ponytail",
-      "sourceType": "github",
-      "skillPath": "skills/ponytail-help/SKILL.md",
-      "computedHash": "a2cd9a9040fd39626875b77838ae6525893ff6d28e6368b2a188ca899c86956f"
+    "prisma-client-api": {
+      "source": "prisma/skills",
+      "sourceType": "autoskills-registry",
+      "computedHash": "922d6b5b4eb4387e72e409fa063f8e1bffb9037aed595cba0d3c257f418b6c18"
     },
-    "ponytail-review": {
-      "source": "DietrichGebert/ponytail",
-      "sourceType": "github",
-      "skillPath": "skills/ponytail-review/SKILL.md",
-      "computedHash": "800dc0c86402978e12359f701b9e0c81ba4607a0cd0027f4596d0f835a67eadc"
+    "tailwind-css-patterns": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "autoskills-registry",
+      "computedHash": "8fd534b64b3f305ade80c207e2f9ba4338d5e409e355af9f724c36764b6709c1"
     }
   }
 }

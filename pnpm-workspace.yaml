@@ -1,0 +1,14 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+allowBuilds:
+  '@nestjs/core': true
+  '@prisma/engines': true
+  '@scarf/scarf': false
+  argon2: true
+  prisma: true
+  unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - '@types/react-dom@19.2.5'

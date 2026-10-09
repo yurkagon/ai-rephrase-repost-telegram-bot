@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.local
+.vite/
+
+# Env — .env.sample is the tracked template
+.env
+.env.*
+!.env.sample
