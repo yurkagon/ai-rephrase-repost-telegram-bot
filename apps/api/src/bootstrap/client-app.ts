@@ -18,11 +18,7 @@ const SERVER_PREFIXES = [`/${API_PREFIX}`, OPENAPI_DOCS_PATH, OPENAPI_JSON_PATH]
 const isServerPath = (path: string) =>
   SERVER_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 
-/** Where `apps/client` puts its build. Override with CLIENT_DIST_PATH when deploying. */
-export const getClientDistPath = () =>
-  process.env.CLIENT_DIST_PATH ?? join(process.cwd(), '..', 'client', 'dist');
-
-export const hasClientBuild = (clientDist = getClientDistPath()) =>
+export const hasClientBuild = (clientDist: string) =>
   existsSync(join(clientDist, CLIENT_INDEX_FILE));
 
 /**
@@ -30,7 +26,10 @@ export const hasClientBuild = (clientDist = getClientDistPath()) =>
  * anything outside the server's own prefixes, so client-side routes survive a
  * reload. Nothing is registered when there is no build — dev runs on Vite.
  */
-export const useClientApp = (app: NestExpressApplication, clientDist = getClientDistPath()) => {
+export const useClientApp = (
+  app: NestExpressApplication,
+  clientDist = join(process.cwd(), '..', 'client', 'dist'),
+) => {
   const logger = new Logger('ClientApp');
   const indexPath = join(clientDist, CLIENT_INDEX_FILE);
 

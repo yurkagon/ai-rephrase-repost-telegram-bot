@@ -1,5 +1,3 @@
-import '../src/config/load-env';
-
 import { PrismaPg } from '@prisma/adapter-pg';
 import { hash } from 'argon2';
 import { Pool } from 'pg';

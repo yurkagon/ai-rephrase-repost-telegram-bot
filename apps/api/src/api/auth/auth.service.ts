@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Environment } from '@/config/env.schema';
 import { JwtService } from '@nestjs/jwt';
 import { verify } from 'argon2';
 import type { StringValue } from 'ms';
@@ -17,7 +18,7 @@ export class AuthService {
 
   constructor(
     private readonly userService: UserService,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<Environment>,
     private readonly jwtService: JwtService,
   ) {
     this.JWT_EXPIRATION_TIME = this.configService.getOrThrow<StringValue>('JWT_EXPIRATION_TIME');

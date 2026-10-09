@@ -1,4 +1,0 @@
-{
-  "ext": "js,ts,json",
-  "exec": "tsx app/index.ts"
-}

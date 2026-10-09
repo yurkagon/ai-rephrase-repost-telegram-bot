@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Environment } from '@/config/env.schema';
 import Redis from 'ioredis';
 
 @Injectable()
@@ -7,9 +8,9 @@ export class RedisService implements OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private readonly redisClient: Redis;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(private readonly configService: ConfigService<Environment>) {
     // A single URL keeps TLS in one place: `rediss://` turns it on, `redis://` does not.
-    this.redisClient = new Redis(this.configService.getOrThrow<string>('REDIS_URL'));
+    this.redisClient = new Redis(this.configService.getOrThrow('REDIS_URL', { infer: true }));
 
     this.redisClient.on('error', (error: unknown) => {
       this.logger.error('Redis connection error', error);
