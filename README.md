@@ -4,9 +4,10 @@
 
 ## Запуск
 
-Потрібен Node.js 22 або новіший.
+Потрібен Node.js 24. Версію задано в `.nvmrc`, `.node-version` та `package.json`.
 
 ```sh
+nvm use
 npm ci
 cp .env.sample .env
 npm start
@@ -19,9 +20,10 @@ npm start
 
 ## Заміна провайдера
 
-`app/services/createLanguageModel.ts` створює поточну модель `ChatOpenAI`.
+`LanguageModelService.init()` створює поточну модель `ChatOpenAI` у сервісі.
 Щоб підключити іншого провайдера, встанови його адаптер LangChain і зміни
-цю фабрику так, щоб вона повертала відповідну реалізацію `BaseChatModel`.
+метод `createLanguageModel()` у `app/services/LanguageModelService.ts`
+так, щоб він повертав відповідну реалізацію `BaseChatModel`.
 
 `LanguageModelService.init(model)` приймає будь-яку реалізацію `BaseChatModel`.
 Сервіс передає системний промпт та повідомлення через `invoke()` і перетворює
@@ -33,7 +35,7 @@ npm start
 
 ```sh
 npm test
-npx tsc --noEmit
+npm run typecheck
 ```
 
 Тести використовують локальні моделі-заглушки без запитів до API.

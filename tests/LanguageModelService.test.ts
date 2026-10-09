@@ -5,7 +5,6 @@ import { AIMessage, BaseMessage } from "@langchain/core/messages";
 import type { ChatResult } from "@langchain/core/outputs";
 
 import LanguageModelService from "../app/services/LanguageModelService";
-import createLanguageModel from "../app/services/createLanguageModel";
 import TextRewriter from "../app/libs/TextRewriter";
 
 class StubChatModel extends BaseChatModel {
@@ -94,21 +93,21 @@ test("rewriter uses the provider-independent text result and skips empty caption
   assert.ok(model.receivedMessages[0].content.toString().includes("HTML"));
 });
 
-test("factory supports existing credentials and configurable model names", () => {
+test("service initializes the default model with existing credentials and configurable model names", () => {
   const keys = ["OPENAI_API_KEY", "OPEN_API_SECRET_KEY", "LLM_MODEL"];
   const previous = keys.map((key) => process.env[key]);
   try {
     keys.forEach((key) => delete process.env[key]);
-    assert.throws(createLanguageModel, /Set OPENAI_API_KEY or OPEN_API_SECRET_KEY/);
+    assert.throws(() => LanguageModelService.init(), /Set OPENAI_API_KEY or OPEN_API_SECRET_KEY/);
 
     process.env.OPEN_API_SECRET_KEY = "test-legacy-key";
-    assert.equal(createLanguageModel().invocationParams().model, "gpt-3.5-turbo");
+    assert.equal(LanguageModelService.init().invocationParams().model, "gpt-3.5-turbo");
     process.env.LLM_MODEL = "configured-model";
-    assert.equal(createLanguageModel().invocationParams().model, "configured-model");
+    assert.equal(LanguageModelService.init().invocationParams().model, "configured-model");
 
     delete process.env.OPEN_API_SECRET_KEY;
     process.env.OPENAI_API_KEY = "test-standard-key";
-    assert.ok(createLanguageModel() instanceof BaseChatModel);
+    assert.ok(LanguageModelService.init() instanceof BaseChatModel);
   } finally {
     keys.forEach((key, index) => {
       if (previous[index] === undefined) delete process.env[key];

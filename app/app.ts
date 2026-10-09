@@ -4,7 +4,6 @@ import _ from "lodash";
 
 import TelegramBot, { Message } from "./libs/TelegramBot";
 import LanguageModelService from "./services/LanguageModelService";
-import createLanguageModel from "./services/createLanguageModel";
 
 import TextRewriter from "./libs/TextRewriter";
 
@@ -14,7 +13,7 @@ class App {
   private rewriter = new TextRewriter();
 
   public async run() {
-    LanguageModelService.init(createLanguageModel());
+    LanguageModelService.init();
 
     this.bot.init({
       targetChannel: this.targetChannel,
