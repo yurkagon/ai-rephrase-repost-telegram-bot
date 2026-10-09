@@ -11,11 +11,9 @@ class TextRewriter {
   public async rewriteTelegramHTML(text: string): Promise<string> {
     if (!this.isValidText(text)) return "";
 
-    const response = await LanguageModelService.sendMessage(text, {
+    return LanguageModelService.sendMessage(text, {
       systemMessage: TextRewriter.rewriteDescription,
     });
-
-    return response.text;
   }
 
   private isValidText(text: string): boolean {
