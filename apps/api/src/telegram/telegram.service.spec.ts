@@ -70,6 +70,7 @@ async function setup(targetChannel = '@target', realRewriter = false) {
   }).compile();
   const bot = module.get(TelegramService);
   bot.instance.botInfo = botInfo;
+  bot.onModuleInit();
   const sendText = jest.spyOn(bot.telegram, 'sendMessage').mockResolvedValue(text());
   const sendPhoto = jest.spyOn(bot.telegram, 'sendPhoto').mockResolvedValue(photo());
   const sendVideo = jest.spyOn(bot.telegram, 'sendVideo').mockResolvedValue(video());
@@ -146,6 +147,9 @@ it('prepares every album caption before publishing once', async () => {
     { type: 'photo', media: 'large', caption: 'Переклад First', parse_mode: 'HTML' },
     { type: 'video', media: 'video', caption: 'Переклад Second', parse_mode: 'HTML' },
   ]);
+  expect(bot['pendingAlbums'].size).toBe(0);
+  expect(bot['processedAlbumIds'].has('-100:@target:album')).toBe(true);
+  expect(jest.getTimerCount()).toBe(0);
   await bot.copyMessage(video('Second', 'album'));
   await jest.advanceTimersByTimeAsync(1000);
   expect(sendAlbum).toHaveBeenCalledTimes(1);
@@ -163,6 +167,130 @@ it('skips the whole album if one caption fails and logs no content', async () =>
   expect(sendAlbum).not.toHaveBeenCalled();
   expect(errors).toHaveBeenCalledWith(expect.objectContaining({ event: 'Telegram album skipped' }));
   expect(JSON.stringify(errors.mock.calls)).not.toContain('Private');
+  expect(bot['pendingAlbums'].size).toBe(0);
+  expect(bot['processedAlbumIds'].has('-100:@target:album')).toBe(true);
+  expect(jest.getTimerCount()).toBe(0);
+  await bot.copyMessage(photo('Hello', 'album'));
+  await bot.copyMessage(video('Private caption', 'album'));
+  await jest.advanceTimersByTimeAsync(1000);
+  expect(rewrite).toHaveBeenCalledTimes(2);
+  expect(sendAlbum).not.toHaveBeenCalled();
+});
+
+it('ignores duplicate media without delaying the album timer', async () => {
+  jest.useFakeTimers();
+  const { bot, rewrite, sendAlbum } = await setup();
+  await bot.copyMessage(photo('First', 'album'));
+  await bot.copyMessage(video('Second', 'album'));
+  await jest.advanceTimersByTimeAsync(900);
+  await bot.copyMessage(photo('Changed duplicate', 'album'));
+  await jest.advanceTimersByTimeAsync(100);
+  expect(rewrite.mock.calls).toEqual([['First'], ['Second']]);
+  expect(sendAlbum).toHaveBeenCalledTimes(1);
+});
+
+it('publishes media in message order even when updates arrive out of order', async () => {
+  jest.useFakeTimers();
+  const { bot, rewrite, sendAlbum } = await setup();
+  await bot.copyMessage(video('Second', 'album'));
+  await bot.copyMessage(photo('First', 'album'));
+  await jest.advanceTimersByTimeAsync(1000);
+  expect(rewrite.mock.calls).toEqual([['First'], ['Second']]);
+  expect(sendAlbum).toHaveBeenCalledWith('@target', [
+    { type: 'photo', media: 'large', caption: '<b>Привіт</b>', parse_mode: 'HTML' },
+    { type: 'video', media: 'video', caption: '<b>Привіт</b>', parse_mode: 'HTML' },
+  ]);
+});
+
+it.each([1, 11])(
+  'skips an album with %i unique media before calling AI or Telegram',
+  async (count) => {
+    jest.useFakeTimers();
+    const { bot, rewrite, sendAlbum } = await setup();
+    for (let id = 1; id <= count; id++) {
+      await bot.copyMessage({ ...photo('Hello', 'album'), message_id: id });
+    }
+    await jest.advanceTimersByTimeAsync(1000);
+    expect(rewrite).not.toHaveBeenCalled();
+    expect(sendAlbum).not.toHaveBeenCalled();
+    expect(errors).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'Telegram album skipped' }),
+    );
+    expect(bot['pendingAlbums'].size).toBe(0);
+    expect(bot['processedAlbumIds'].has('-100:@target:album')).toBe(true);
+    expect(jest.getTimerCount()).toBe(0);
+  },
+);
+
+it('accepts ten unique media and keeps identical group IDs in different source chats separate', async () => {
+  jest.useFakeTimers();
+  const { bot, rewrite, sendAlbum } = await setup();
+  for (let id = 1; id <= 10; id++) {
+    await bot.copyMessage({ ...photo('Hello', 'album'), message_id: id });
+  }
+  const otherChat = { ...common.chat, id: -200 };
+  await bot.copyMessage({ ...photo('Other first', 'album'), chat: otherChat });
+  await bot.copyMessage({ ...video('Other second', 'album'), chat: otherChat });
+  await jest.advanceTimersByTimeAsync(1000);
+  expect(rewrite).toHaveBeenCalledTimes(12);
+  expect(sendAlbum).toHaveBeenCalledTimes(2);
+  expect(sendAlbum.mock.calls[0][1]).toHaveLength(10);
+  expect(sendAlbum.mock.calls[1][1]).toHaveLength(2);
+  expect(bot['pendingAlbums'].size).toBe(0);
+});
+
+it('releases the album after a Telegram failure and does not retry it on late updates', async () => {
+  jest.useFakeTimers();
+  const { bot, rewrite, sendAlbum } = await setup();
+  sendAlbum.mockRejectedValueOnce(new Error('Private Telegram details'));
+  await bot.copyMessage(photo('First', 'album'));
+  await bot.copyMessage(video('Second', 'album'));
+  await jest.advanceTimersByTimeAsync(1000);
+  expect(bot['pendingAlbums'].size).toBe(0);
+  expect(bot['processedAlbumIds'].has('-100:@target:album')).toBe(true);
+  expect(jest.getTimerCount()).toBe(0);
+  expect(JSON.stringify(errors.mock.calls)).not.toContain('Private');
+  await bot.copyMessage(photo('First', 'album'));
+  await bot.copyMessage(video('Second', 'album'));
+  await jest.advanceTimersByTimeAsync(1000);
+  expect(rewrite).toHaveBeenCalledTimes(2);
+  expect(sendAlbum).toHaveBeenCalledTimes(1);
+});
+
+it('evicts the oldest processed ID when a new album exceeds the 10,000-ID cache', async () => {
+  jest.useFakeTimers();
+  const { bot, sendAlbum } = await setup();
+  const cache = bot['processedAlbumIds'];
+  for (let id = 0; id < 10_000; id++) cache.add(`-100:@target:album-${id}`);
+  await bot.copyMessage(photo('First', 'album-0'));
+  await bot.copyMessage(video('Second', 'album-0'));
+  expect(bot['pendingAlbums'].size).toBe(0);
+
+  await bot.copyMessage(photo('First', 'new-album'));
+  await bot.copyMessage(video('Second', 'new-album'));
+  await jest.advanceTimersByTimeAsync(1000);
+  expect(cache.size).toBe(10_000);
+  expect(cache.has('-100:@target:album-0')).toBe(false);
+  expect(cache.has('-100:@target:album-1')).toBe(true);
+  expect(cache.has('-100:@target:new-album')).toBe(true);
+
+  await bot.copyMessage(photo('First', 'album-1'));
+  await bot.copyMessage(video('Second', 'album-1'));
+  await bot.copyMessage(photo('First', 'album-0'));
+  await bot.copyMessage(video('Second', 'album-0'));
+  await jest.advanceTimersByTimeAsync(1000);
+  expect(sendAlbum).toHaveBeenCalledTimes(2);
+  expect(cache.size).toBe(10_000);
+});
+
+it('does not allocate an album or timer when a photo has no usable file ID', async () => {
+  jest.useFakeTimers();
+  const { bot } = await setup();
+  await expect(bot.copyMessage({ ...photo('First', 'album'), photo: [] })).rejects.toThrow(
+    'no photos',
+  );
+  expect(bot['pendingAlbums'].size).toBe(0);
+  expect(jest.getTimerCount()).toBe(0);
 });
 
 it('an album without captions makes no AI requests', async () => {
@@ -277,6 +405,51 @@ it('does not treat a polling rejection during shutdown as a fatal error', async 
   await Promise.resolve();
   expect(kill).not.toHaveBeenCalled();
 });
+
+it('clears processed history and pending albums together on shutdown', async () => {
+  jest.useFakeTimers();
+  const { bot, rewrite, sendAlbum } = await setup();
+  await bot.copyMessage(photo('First', 'completed'));
+  await bot.copyMessage(video('Second', 'completed'));
+  await jest.advanceTimersByTimeAsync(1000);
+  await bot.copyMessage(photo('First', 'pending'));
+  await bot.copyMessage(video('Second', 'pending'));
+  expect(bot['pendingAlbums'].size).toBe(1);
+  expect(bot['processedAlbumIds'].size).toBe(1);
+  bot.onApplicationShutdown();
+  await jest.advanceTimersByTimeAsync(1000);
+  expect(bot['pendingAlbums'].size).toBe(0);
+  expect(bot['processedAlbumIds'].size).toBe(0);
+  expect(jest.getTimerCount()).toBe(0);
+  expect(rewrite).toHaveBeenCalledTimes(2);
+  expect(sendAlbum).toHaveBeenCalledTimes(1);
+});
+
+it.each([false, true])(
+  'does not publish or restore album history when AI settles after shutdown (reject=%s)',
+  async (reject) => {
+    jest.useFakeTimers();
+    const { bot, rewrite, sendAlbum } = await setup();
+    let finish!: () => void;
+    rewrite.mockReturnValue(
+      new Promise<string>((resolve, fail) => {
+        finish = () => (reject ? fail(new Error('Stopped')) : resolve('Переклад'));
+      }),
+    );
+    await bot.copyMessage(photo('First', 'album'));
+    await bot.copyMessage(video('Second', 'album'));
+    await jest.advanceTimersByTimeAsync(1000);
+    expect(rewrite).toHaveBeenCalledTimes(2);
+    bot.onApplicationShutdown();
+    finish();
+    await jest.advanceTimersByTimeAsync(0);
+    expect(sendAlbum).not.toHaveBeenCalled();
+    expect(bot['pendingAlbums'].size).toBe(0);
+    expect(bot['processedAlbumIds'].size).toBe(0);
+    expect(jest.getTimerCount()).toBe(0);
+    expect(kill).not.toHaveBeenCalled();
+  },
+);
 
 it('stops polling and cancels pending albums on shutdown', async () => {
   jest.useFakeTimers();

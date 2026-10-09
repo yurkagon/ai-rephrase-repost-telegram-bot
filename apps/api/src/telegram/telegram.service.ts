@@ -4,6 +4,7 @@ import {
   Logger,
   OnApplicationBootstrap,
   OnApplicationShutdown,
+  OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Environment } from '@/config/env.schema';
@@ -18,21 +19,27 @@ import { TELEGRAM_OPTIONS, type TelegramModuleOptions } from './telegram.options
 type AlbumMedia = InputMediaPhoto | InputMediaVideo;
 type MediaMessage = Message.PhotoMessage | Message.VideoMessage;
 
+const ALBUM_DEBOUNCE_MS = 1_000;
+const MAX_PROCESSED_ALBUM_IDS = 10_000;
+
 @Injectable()
-export class TelegramService implements OnApplicationBootstrap, OnApplicationShutdown {
+export class TelegramService
+  implements OnModuleInit, OnApplicationBootstrap, OnApplicationShutdown
+{
   private readonly logger = new Logger(TelegramService.name);
   private readonly targetChannel: string;
   private stopping = false;
   public readonly instance: Telegraf;
-  // shortcut: completed album IDs stay in memory until restart; replace with persistent deduplication when storage is added.
-  private readonly mediaGroupStore = new Map<
+  private readonly pendingAlbums = new Map<
     string,
     {
-      data: AlbumMedia[];
-      publish: DebouncedFunc<() => Promise<void>>;
-      isUploadingFinished: boolean;
+      media: Map<number, AlbumMedia>;
+      publish: DebouncedFunc<() => void>;
+      processing: boolean;
     }
   >();
+  // shortcut: deduplication covers only recent albums in this process; use storage when delivery must survive restarts.
+  private readonly processedAlbumIds = new Set<string>();
 
   constructor(
     config: ConfigService<Environment>,
@@ -88,7 +95,9 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
 
   public onApplicationShutdown(): void {
     this.stopping = true;
-    for (const group of this.mediaGroupStore.values()) group.publish.cancel();
+    for (const group of this.pendingAlbums.values()) group.publish.cancel();
+    this.pendingAlbums.clear();
+    this.processedAlbumIds.clear();
     try {
       this.instance.stop('Application shutdown');
     } catch {
@@ -132,45 +141,66 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
   private copyMediaGroupMessage(message: MediaMessage): void {
     const chatId = this.targetChannel;
     const key = `${message.chat.id}:${chatId}:${message.media_group_id}`;
-    let group = this.mediaGroupStore.get(key);
-    if (!group) {
-      group = {
-        data: [],
-        isUploadingFinished: false,
-        publish: debounce(async () => {
-          const album = this.mediaGroupStore.get(key);
-          if (this.stopping || !album || album.isUploadingFinished) return;
-          album.isUploadingFinished = true;
-          try {
-            const data = await Promise.all(
-              album.data.map(async (item) => ({
-                ...item,
-                caption: await this.rewriter.rewriteTelegramHTML(item.caption ?? ''),
-              })),
-            );
-            if (!this.stopping) await this.telegram.sendMediaGroup(chatId, data);
-          } catch (error) {
-            this.logger.error({
-              event: 'Telegram album skipped',
-              mediaGroupId: message.media_group_id,
-              chatId,
-              error: error instanceof Error ? error.name : 'UnknownError',
-            });
-          } finally {
-            album.data = [];
-          }
-        }, 1000),
-      };
-      this.mediaGroupStore.set(key, group);
-    }
-    if (group.isUploadingFinished) return;
+    if (this.processedAlbumIds.has(key)) return;
+
+    let group = this.pendingAlbums.get(key);
+    if (group?.processing || group?.media.has(message.message_id)) return;
 
     const caption = { caption: toHTML(message), parse_mode: 'HTML' as const };
-    group.data.push(
+    const media: AlbumMedia =
       'photo' in message
         ? { type: 'photo', media: this.photoFileId(message), ...caption }
-        : { type: 'video', media: message.video.file_id, ...caption },
-    );
-    void group.publish();
+        : { type: 'video', media: message.video.file_id, ...caption };
+    if (!group) {
+      group = {
+        media: new Map(),
+        processing: false,
+        publish: debounce(() => {
+          void this.publishAlbum(key);
+        }, ALBUM_DEBOUNCE_MS),
+      };
+      this.pendingAlbums.set(key, group);
+    }
+
+    group.media.set(message.message_id, media);
+    group.publish();
+  }
+
+  private async publishAlbum(key: string): Promise<void> {
+    const album = this.pendingAlbums.get(key);
+    if (this.stopping || !album || album.processing) return;
+    album.processing = true;
+    try {
+      if (album.media.size < 2 || album.media.size > 10) {
+        throw new Error('Album must contain between 2 and 10 unique media messages.');
+      }
+      const media = [...album.media.entries()]
+        .sort(([firstId], [secondId]) => firstId - secondId)
+        .map(([, item]) => item);
+      const data = await Promise.all(
+        media.map(async (item) => ({
+          ...item,
+          caption: await this.rewriter.rewriteTelegramHTML(item.caption ?? ''),
+        })),
+      );
+      if (!this.stopping) await this.telegram.sendMediaGroup(this.targetChannel, data);
+    } catch (error) {
+      this.logger.error({
+        event: 'Telegram album skipped',
+        albumKey: key,
+        chatId: this.targetChannel,
+        error: error instanceof Error ? error.name : 'UnknownError',
+      });
+    } finally {
+      album.publish.cancel();
+      this.pendingAlbums.delete(key);
+      if (!this.stopping) {
+        this.processedAlbumIds.add(key);
+        if (this.processedAlbumIds.size > MAX_PROCESSED_ALBUM_IDS) {
+          const oldest = this.processedAlbumIds.values().next();
+          if (!oldest.done) this.processedAlbumIds.delete(oldest.value);
+        }
+      }
+    }
   }
 }
