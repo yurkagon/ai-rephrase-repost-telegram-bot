@@ -1,7 +1,7 @@
 {
   "name": "client",
   "version": "0.0.1",
-  "description": "React and Tailwind starter client",
+  "description": "CopywriteRepostBot web client",
   "author": "Yurii Khvyshchuk",
   "private": true,
   "license": "MIT",

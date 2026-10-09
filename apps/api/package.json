@@ -1,7 +1,7 @@
 {
   "name": "api",
   "version": "0.0.1",
-  "description": "NestJS starter API with Prisma authentication",
+  "description": "CopywriteRepostBot API with Telegram reposting and Prisma authentication",
   "author": "Yurii Khvyshchuk",
   "private": true,
   "license": "MIT",

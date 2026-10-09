@@ -1,6 +1,6 @@
-# Telegram repost bot
+# CopywriteRepostBot
 
-Monorepo starter with NestJS, Prisma, PostgreSQL, Redis, React, Vite, and Tailwind CSS. The API includes JWT authentication, role-based access, and user management. The client is intentionally a single Hello world page. The Telegram repost bot runs in the API process and translates posts to Ukrainian through LangChain; it is independent of application accounts and storage.
+Telegram repost bot monorepo with NestJS, Prisma, PostgreSQL, Redis, React, Vite, and Tailwind CSS. The API includes JWT authentication, role-based access, and user management. The client is intentionally a single Hello world page. The Telegram repost bot runs in the API process and translates posts to Ukrainian through LangChain; it is independent of application accounts and storage.
 
 ## Requirements
 
@@ -26,6 +26,8 @@ Monorepo starter with NestJS, Prisma, PostgreSQL, Redis, React, Vite, and Tailwi
 | `pnpm db:up` / `pnpm db:down`                        | Start or stop local PostgreSQL and Redis; `db:down` keeps data     |
 | `pnpm db:migrate` / `pnpm db:deploy`                 | Apply migrations in development or deployment                      |
 | `pnpm db:generate` / `pnpm db:seed` / `pnpm db:view` | Generate Prisma Client, seed the first user, or open Prisma Studio |
+
+Docker Compose uses the `copywrite-repost-bot` project name. Existing containers and volumes from a previous project name are not migrated; the renamed project uses a separate PostgreSQL volume.
 
 `pnpm install` activates the Git hooks through Husky. Before each commit, `lint-staged` runs Prettier and ESLint on staged app code. Before each push, `pnpm test` runs the API tests.
 

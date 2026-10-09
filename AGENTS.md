@@ -1,4 +1,4 @@
-# Starter conventions
+# Project conventions
 
 - Keep the API in `apps/api`, the React client in `apps/client`, and shared code in `packages/shared`.
 - Add Prisma schema changes through migrations. The initial migration targets a new, empty database.

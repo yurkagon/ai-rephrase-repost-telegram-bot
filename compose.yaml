@@ -4,7 +4,7 @@ services:
     ports:
       - '${LOCAL_POSTGRES_PORT:-5433}:5432'
     environment:
-      POSTGRES_DB: ${LOCAL_POSTGRES_DB:-nestjs_starter}
+      POSTGRES_DB: ${LOCAL_POSTGRES_DB:-copywrite_repost_bot}
       POSTGRES_USER: ${LOCAL_POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${LOCAL_POSTGRES_PASSWORD:-postgres}
     volumes:

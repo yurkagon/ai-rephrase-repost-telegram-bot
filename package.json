@@ -1,5 +1,5 @@
 {
-  "name": "nestjs-prisma-react-starter",
+  "name": "copywrite-repost-bot",
   "version": "0.0.1",
   "private": true,
   "author": "Yurii Khvyshchuk",
@@ -22,8 +22,8 @@
     "db:deploy": "pnpm --filter api db:deploy",
     "db:view": "pnpm --filter api db:view",
     "db:seed": "pnpm --filter api db:seed",
-    "db:up": "docker compose --project-name nestjs-starter up --wait -d postgres redis",
-    "db:down": "docker compose --project-name nestjs-starter down",
+    "db:up": "docker compose --project-name copywrite-repost-bot up --wait -d postgres redis",
+    "db:down": "docker compose --project-name copywrite-repost-bot down",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
     "prepare": "node -e \"if (process.env.HUSKY !== '0' && process.env.NODE_ENV !== 'production') require('child_process').execFileSync('husky', { stdio: 'inherit' })\"",
     "lint:api": "pnpm --filter api lint",

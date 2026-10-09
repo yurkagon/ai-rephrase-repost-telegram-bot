@@ -1,9 +1,9 @@
 /** All endpoints live under this prefix so the rest of the URL space is the client's. */
 export const API_PREFIX = 'api';
 
-export const OPENAPI_TITLE = 'NestJS Starter API';
+export const OPENAPI_TITLE = 'CopywriteRepostBot API';
 export const OPENAPI_DESCRIPTION = [
-  'Starter REST API with authentication and user management.',
+  'CopywriteRepostBot REST API with authentication and user management.',
   'Authentication uses JWT bearer tokens: send the access token as `Authorization: Bearer <token>`.',
 ].join('\n\n');
 export const OPENAPI_VERSION = '1.0.0';

@@ -1,5 +1,5 @@
 {
-  "name": "@nestjs-starter/shared",
+  "name": "@copywrite-repost-bot/shared",
   "version": "0.0.0",
   "private": true,
   "main": "./src/index.ts",
