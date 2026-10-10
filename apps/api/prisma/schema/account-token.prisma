@@ -1,0 +1,10 @@
+model AccountToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String
+  hash      String   @unique
+  expiresAt DateTime
+
+  @@index([userId, kind])
+}

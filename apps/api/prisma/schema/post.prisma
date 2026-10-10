@@ -1,0 +1,35 @@
+enum PostStatus {
+  COLLECTING
+  INBOX
+  GENERATING
+  DRAFT
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  SKIPPED
+  PUBLICATION_UNKNOWN
+}
+
+model Post {
+  id             String         @id @default(uuid())
+  routeId        String
+  route          Route          @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  sourceKey      String
+  originalHtml   String
+  media          PostMedia[]
+  status         PostStatus     @default(INBOX)
+  revision       Int            @default(0)
+  revisions      PostRevision[]
+  operations     Operation[]
+  runs           AiRun[]
+  publishedIds   Int[]
+  error          String?
+  failureStage   String?
+  rating         Int?
+  lastReceivedAt DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+
+  @@unique([routeId, sourceKey])
+  @@index([routeId, createdAt])
+  @@index([status, lastReceivedAt])
+}

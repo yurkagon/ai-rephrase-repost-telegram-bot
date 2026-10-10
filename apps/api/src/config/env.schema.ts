@@ -50,8 +50,6 @@ export const environmentSchema = z.object({
     .optional()
     .transform((value) => value || 'gpt-6-luna'),
   APP_URL: z.url({ protocol: /^https?$/ }).default('http://localhost:3001'),
-  AI_USER_DAILY_LIMIT: z.coerce.number().int().positive().default(20),
-  AI_PLATFORM_DAILY_LIMIT: z.coerce.number().int().positive().default(200),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

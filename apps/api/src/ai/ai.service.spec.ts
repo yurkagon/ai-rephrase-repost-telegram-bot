@@ -248,7 +248,7 @@ it('recovers from a connection failure using the LangChain retry loop', async ()
 function serviceWithModel(model: BaseChatModel) {
   jest.spyOn(AiService, 'createLanguageModel').mockReturnValueOnce(model);
 
-  return new AiService(new ConfigService());
+  return new AiService(new ConfigService({ LLM_MODEL: 'other-provider' }));
 }
 
 class StubModel extends BaseChatModel {

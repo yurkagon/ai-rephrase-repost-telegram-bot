@@ -4,7 +4,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { Authorization, CurrentUser } from '@/common/decorators';
 
 import { ChannelsService } from './channels.service';
-import { AddChannelDto, CreateRouteDto, UpdateRouteDto } from './channels.dto';
+import { AddChannelDto, CreateRouteDto, UpdateRouteDto } from './dto/channels.dto';
 
 @ApiTags('Channels and routes')
 @Controller('channels')

@@ -7,8 +7,8 @@ import { PrismaService } from '@/infra/prisma/prisma.service';
 import { AiService, RewriteError, rewriteOptionsSchema } from '@/ai/ai.service';
 import { ChannelsService } from '@/api/channels/channels.service';
 import { TelegramService } from '@/telegram/telegram.service';
+import { telegramHtml } from '@/telegram/telegram-html';
 
-import { telegramHtml } from './telegram-html';
 import { postInclude } from './posts.service';
 
 const captionsSchema = z.array(z.object({ messageId: z.number(), html: z.string() }));

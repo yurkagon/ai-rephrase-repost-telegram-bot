@@ -1,0 +1,27 @@
+enum OperationKind {
+  GENERATE
+  PUBLISH
+}
+
+enum OperationStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  UNKNOWN
+}
+
+model Operation {
+  id        String          @id @default(uuid())
+  postId    String
+  post      Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  kind      OperationKind
+  status    OperationStatus @default(PENDING)
+  revision  Int
+  options   Json
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([postId, kind, revision])
+  @@index([status])
+}

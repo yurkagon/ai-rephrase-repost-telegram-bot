@@ -13,7 +13,21 @@ it.each([
   '<b onclick="alert(1)">x</b>',
   '<img src="x">',
   '<span>x</span>',
+  '<a>missing URL</a>',
+  '<a href="//example.com">relative URL</a>',
+  '<span class="other">x</span>',
+  '<code class="language-js onclick=alert(1)">x</code>',
+  '<tg-emoji emoji-id="invalid">x</tg-emoji>',
 ])('rejects unsafe or unsupported markup %s', (html) => expect(() => telegramHtml(html)).toThrow());
+
+it.each([
+  '<a href="tg://user?id=123">user</a>',
+  '<span class="tg-spoiler">hidden</span>',
+  '<code class="language-js">const value = 1;</code>',
+  '<tg-emoji emoji-id="123">🙂</tg-emoji>',
+])('preserves supported Telegram attributes %s', (html) => {
+  expect(telegramHtml(html)).toBe(html);
+});
 
 it('rejects oversized messages and captions', () => {
   expect(() => telegramHtml('x'.repeat(4097))).toThrow('length');

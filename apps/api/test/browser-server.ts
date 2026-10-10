@@ -3,7 +3,6 @@ import 'reflect-metadata';
 import { Test } from '@nestjs/testing';
 import { ValidationPipe } from '@nestjs/common';
 import express from 'express';
-import cookieParser from 'cookie-parser';
 
 import { TelegramService } from '@/telegram/telegram.service';
 import { AiService } from '@/ai/ai.service';
@@ -27,8 +26,6 @@ async function main() {
     OPENAI_API_KEY: 'offline',
     TELEGRAM_BOT_API_TOKEN: 'offline',
     APP_URL: 'http://127.0.0.1:3007',
-    AI_USER_DAILY_LIMIT: '20',
-    AI_PLATFORM_DAILY_LIMIT: '200',
   });
 
   let link: (ctx: unknown) => Promise<void> = async () => {};
@@ -84,7 +81,6 @@ async function main() {
     .compile();
   const app = module.createNestApplication();
 
-  app.use(cookieParser());
   app.use(express.json());
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),

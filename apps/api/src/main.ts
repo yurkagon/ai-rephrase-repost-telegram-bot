@@ -1,5 +1,4 @@
 import { NestFactory } from '@nestjs/core';
-import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -19,7 +18,6 @@ async function bootstrap() {
   const port = config.getOrThrow('PORT', { infer: true });
 
   app.enableShutdownHooks();
-  app.use(cookieParser());
   app.use(helmet());
 
   if (config.get('NODE_ENV', { infer: true }) === 'production') app.set('trust proxy', 1);
@@ -41,7 +39,6 @@ async function bootstrap() {
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     maxAge: 86400,
-    credentials: true,
   });
 
   app.setGlobalPrefix(API_PREFIX);

@@ -1,0 +1,11 @@
+model PostMedia {
+  id              String @id @default(uuid())
+  postId          String
+  post            Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  messageId       Int
+  type            String
+  fileId          String
+  originalCaption String
+
+  @@unique([postId, messageId])
+}

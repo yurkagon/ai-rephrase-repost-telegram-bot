@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { telegramHtml } from '@/api/posts/telegram-html';
+import { telegramHtml } from '@/telegram/telegram-html';
 
 export type EvalCase = {
   id: string;

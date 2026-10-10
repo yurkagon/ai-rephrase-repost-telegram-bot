@@ -119,10 +119,11 @@ export class UserService {
 
     const password = await hash(newPassword);
 
-    await this.prismaService.$transaction([
-      this.prismaService.user.update({ where: { id }, data: { password }, select: { id: true } }),
-      this.prismaService.refreshSession.deleteMany({ where: { userId: id } }),
-    ]);
+    await this.prismaService.user.update({
+      where: { id },
+      data: { password },
+      select: { id: true },
+    });
 
     await this.redisService.del(`user:id:${id}`);
   }

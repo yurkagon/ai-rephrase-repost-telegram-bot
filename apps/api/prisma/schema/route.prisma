@@ -1,0 +1,16 @@
+model Route {
+  id        String   @id @default(uuid())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  sourceId  String
+  source    Channel  @relation("Source", fields: [sourceId], references: [id])
+  targetId  String
+  target    Channel  @relation("Target", fields: [targetId], references: [id])
+  name      String
+  active    Boolean  @default(true)
+  options   Json
+  posts     Post[]
+  createdAt DateTime @default(now())
+
+  @@unique([ownerId, sourceId, targetId])
+}

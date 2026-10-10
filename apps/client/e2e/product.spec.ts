@@ -84,6 +84,12 @@ test('new account connects channels, reviews an AI draft and publishes it', asyn
   await page.getByRole('main').getByLabel('Мова інтерфейсу').selectOption('en');
   await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible();
 
+  await page.getByLabel('First name', { exact: true }).fill('Updated');
+  await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel('First name', { exact: true })).toHaveValue('Updated');
+
   if (process.env.CAPTURE_UI === '1')
     await page.screenshot({
       path: `../../.impeccable/review/${testInfo.project.name}-account.png`,
@@ -144,4 +150,7 @@ test('new account connects channels, reviews an AI draft and publishes it', asyn
   await page.goto('/account');
   await page.getByRole('main').getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page).toHaveURL(/login/);
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation')).toHaveCount(0);
 });

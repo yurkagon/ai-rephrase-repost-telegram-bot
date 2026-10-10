@@ -460,7 +460,7 @@
       "Compact navigation and inbox beside a readable message workspace.",
       "Blue actions and selection states on light, mostly flat surfaces.",
       "Source, draft, and target preview with deliberate publishing confirmation.",
-      "Truthful loading, empty, error, permission, quota, and publication states."
+      "Truthful loading, empty, error, permission, and publication states."
     ],
     "rules": [
       {

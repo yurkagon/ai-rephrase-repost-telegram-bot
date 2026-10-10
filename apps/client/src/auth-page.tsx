@@ -26,10 +26,13 @@ export function AuthPage() {
 
     try {
       if (mode === 'login') {
-        const result = await api<{ user: User; accessToken: string }>('/auth/login', {
-          method: 'POST',
-          body: body(fields),
-        });
+        const result = await api<{ user: User; accessToken: string; refreshToken: string }>(
+          '/auth/login',
+          {
+            method: 'POST',
+            body: body(fields),
+          },
+        );
 
         cache.clear();
         establish(result);

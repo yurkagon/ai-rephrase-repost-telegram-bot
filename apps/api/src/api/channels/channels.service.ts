@@ -13,26 +13,7 @@ import { TelegramService } from '@/telegram/telegram.service';
 import { newToken, tokenHash } from '@/api/auth/auth.service';
 import { rewriteOptionsSchema } from '@/ai/ai.service';
 
-import { CreateRouteDto, UpdateRouteDto } from './channels.dto';
-
-export function assertAcyclic(
-  edges: { sourceId: string; targetId: string }[],
-  source: string,
-  target: string,
-): void {
-  const visit = [target];
-  const seen = new Set<string>();
-
-  while (visit.length) {
-    const node = visit.pop()!;
-
-    if (node === source) throw new BadRequestException('Route creates a cycle');
-    if (seen.has(node)) continue;
-
-    seen.add(node);
-    visit.push(...edges.filter((e) => e.sourceId === node).map((e) => e.targetId));
-  }
-}
+import { CreateRouteDto, UpdateRouteDto } from './dto/channels.dto';
 
 @Injectable()
 export class ChannelsService implements OnModuleInit {
@@ -210,11 +191,13 @@ export class ChannelsService implements OnModuleInit {
 
     if (!route) throw new NotFoundException('Route not found');
 
+    const { options, ...data } = dto;
+
     return this.db.route.update({
       where: { id },
       data: {
-        ...dto,
-        ...(dto.options ? { options: rewriteOptionsSchema.parse(dto.options) } : {}),
+        ...data,
+        ...(options ? { options: rewriteOptionsSchema.parse(options) } : {}),
       },
     });
   }
@@ -231,5 +214,24 @@ export class ChannelsService implements OnModuleInit {
       throw new ConflictException('Wait for operations to finish');
 
     return this.db.route.delete({ where: { id } });
+  }
+}
+
+export function assertAcyclic(
+  edges: { sourceId: string; targetId: string }[],
+  source: string,
+  target: string,
+): void {
+  const visit = [target];
+  const seen = new Set<string>();
+
+  while (visit.length) {
+    const node = visit.pop()!;
+
+    if (node === source) throw new BadRequestException('Route creates a cycle');
+    if (seen.has(node)) continue;
+
+    seen.add(node);
+    visit.push(...edges.filter((e) => e.sourceId === node).map((e) => e.targetId));
   }
 }

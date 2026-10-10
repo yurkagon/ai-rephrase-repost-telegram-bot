@@ -82,6 +82,4 @@ export type Metrics = {
   outputTokens: number | null;
   averageDurationMs: number | null;
   averageRating: number | null;
-  todayUsed: number;
-  dailyLimit: number;
 };

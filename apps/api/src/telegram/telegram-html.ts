@@ -3,7 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import sanitizeHtml from 'sanitize-html';
 import { Parser } from 'htmlparser2';
 
-const allowed = [
+const allowedTags = [
   'b',
   'strong',
   'i',
@@ -24,14 +24,15 @@ const allowed = [
 
 export function telegramHtml(html: string, caption = false): string {
   let text = '';
-  let problem = '';
   const parser = new Parser(
     {
       ontext(value) {
         text += value;
       },
       onopentag(name, attrs) {
-        if (!allowed.includes(name)) problem = 'Unsupported Telegram HTML tag';
+        if (!allowedTags.includes(name)) {
+          throw new BadRequestException('Unsupported Telegram HTML tag');
+        }
 
         for (const [key, value] of Object.entries(attrs)) {
           const valid =
@@ -43,26 +44,30 @@ export function telegramHtml(html: string, caption = false): string {
             (name === 'blockquote' && key === 'expandable') ||
             (name === 'tg-emoji' && key === 'emoji-id' && /^\d+$/.test(value));
 
-          if (!valid) problem = 'Unsafe or unsupported Telegram HTML attribute';
+          if (!valid) {
+            throw new BadRequestException('Unsafe or unsupported Telegram HTML attribute');
+          }
         }
 
-        if (name === 'a' && !attrs.href) problem = 'Link has no URL';
+        if (name === 'a' && !attrs.href) {
+          throw new BadRequestException('Link has no URL');
+        }
 
-        if (name === 'span' && attrs.class !== 'tg-spoiler') problem = 'Unsupported span';
+        if (name === 'span' && attrs.class !== 'tg-spoiler') {
+          throw new BadRequestException('Unsupported span');
+        }
       },
     },
     { decodeEntities: true },
   );
 
-  parser.write(html);
-  parser.end();
+  parser.end(html);
 
-  if (problem) throw new BadRequestException(problem);
   if (text.length > (caption ? 1024 : 4096))
     throw new BadRequestException('Telegram text length exceeded');
 
   return sanitizeHtml(html, {
-    allowedTags: allowed,
+    allowedTags,
     allowedAttributes: {
       a: ['href'],
       span: ['class'],
@@ -75,21 +80,21 @@ export function telegramHtml(html: string, caption = false): string {
   });
 }
 
-const attribute = (text: string) => escapers.HTML(text).replace(/"/g, '&quot;');
+const escapeAttribute = (text: string) => escapers.HTML(text).replace(/"/g, '&quot;');
 
 // The library skips escaping when a message has no entities; escape that branch explicitly.
-
 export const messageToHtml = serialiseWith((text, node) => {
   if (!node) return escapers.HTML(text);
 
-  const safe =
-    node.type === 'text_link'
-      ? { ...node, url: attribute(node.url) }
-      : node.type === 'url'
-        ? { ...node, text: attribute(node.text) }
-        : node.type === 'pre' && node.language
-          ? { ...node, language: attribute(node.language) }
-          : node;
+  let safe = node;
+
+  if (node.type === 'text_link') {
+    safe = { ...node, url: escapeAttribute(node.url) };
+  } else if (node.type === 'url') {
+    safe = { ...node, text: escapeAttribute(node.text) };
+  } else if (node.type === 'pre' && node.language) {
+    safe = { ...node, language: escapeAttribute(node.language) };
+  }
 
   return serialisers.HTML(text, safe);
 }, escapers.HTML);

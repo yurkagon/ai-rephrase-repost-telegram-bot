@@ -111,7 +111,6 @@ const en = {
   outputTokens: 'Output tokens',
   averageDurationMs: 'Average response time',
   averageRating: 'Average rating',
-  daily: 'Daily AI allowance',
   metricsHint:
     'Measured from real AI requests. Token counts may be unavailable for failed requests.',
   noData: 'No data yet',
@@ -238,7 +237,6 @@ const uk: typeof en = {
   outputTokens: 'Вихідні токени',
   averageDurationMs: 'Середній час відповіді',
   averageRating: 'Середня оцінка',
-  daily: 'Денний ліміт AI',
   metricsHint:
     'Дані реальних AI-запитів. Для невдалих викликів кількість токенів може бути невідомою.',
   noData: 'Даних ще немає',

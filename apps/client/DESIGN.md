@@ -134,7 +134,7 @@ White lists and controls sit beside a pale blue-gray reading canvas. The source,
 - Compact navigation and inbox beside a readable message workspace.
 - Blue actions and selection states on light, mostly flat surfaces.
 - Source, draft, and target preview with deliberate publishing confirmation.
-- Truthful loading, empty, error, permission, quota, and publication states.
+- Truthful loading, empty, error, permission, and publication states.
 
 Evidence: extracted from `src/styles/globals.css` and the client components. The selected Ukrainian workspace draft was visually reviewed in the repository's `.impeccable/review/desktop.png` and `mobile.png`. Authentication, channels, routes, history, metrics, account, media, and confirmation states were source-reviewed; these captures do not establish their rendered quality, live AI output quality, or end-to-end Telegram delivery.
 
@@ -229,7 +229,7 @@ The editor offers SVG formatting controls with accessible labels, an inset focus
 
 ### Feedback and metrics
 
-Errors use an alert region and a red-tinted notice. Loading uses a status region. Empty states pair concise explanation with a next action where available. Metrics show API-provided counts, duration, rating, and quota; absent averages read as no data. Preserve these states without substituting decorative charts or invented activity.
+Errors use an alert region and a red-tinted notice. Loading uses a status region. Empty states pair concise explanation with a next action where available. Metrics show API-provided counts, duration, and rating; absent averages read as no data. Preserve these states without substituting decorative charts or invented activity.
 
 ## Do's and Don'ts
 

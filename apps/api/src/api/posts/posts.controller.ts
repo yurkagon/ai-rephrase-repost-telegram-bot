@@ -3,7 +3,6 @@ import {
   Controller,
   Get,
   HttpCode,
-  NotFoundException,
   Param,
   Patch,
   Post,
@@ -13,13 +12,9 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { ConfigService } from '@nestjs/config';
 
 import { Authorization, CurrentUser } from '@/common/decorators';
-import { TelegramService } from '@/telegram/telegram.service';
-import type { Environment } from '@/config/env.schema';
 
 import { PostsService } from './posts.service';
 import {
@@ -29,17 +24,13 @@ import {
   RatingDto,
   ResolveDto,
   RevisionDto,
-} from './posts.dto';
+} from './dto/posts.dto';
 
 @ApiTags('Posts')
 @Controller('posts')
 @Authorization()
 export class PostsController {
-  constructor(
-    private readonly posts: PostsService,
-    private readonly bot: TelegramService,
-    private readonly config: ConfigService<Environment>,
-  ) {}
+  constructor(private readonly posts: PostsService) {}
 
   @Get() list(@CurrentUser('id') owner: string, @Query() query: ListPostsDto) {
     return this.posts.list(owner, query.routeId, query.cursor, query.view);
@@ -102,45 +93,13 @@ export class PostsController {
     @Param('mediaId') mediaId: string,
     @Res() response: Response,
   ) {
-    const post = await this.posts.owned(owner, id);
-    const media = post.media.find((item) => item.id === mediaId);
+    const { stream, contentType } = await this.posts.media(owner, id, mediaId);
 
-    if (!media) throw new NotFoundException('Media not found');
+    response.setHeader('Content-Type', contentType);
+    response.setHeader('Cache-Control', 'private, no-store');
 
     try {
-      const file = await this.bot.telegram.getFile(media.fileId);
-
-      if (!file.file_path || (file.file_size ?? 0) > 20 * 1024 * 1024)
-        throw new Error('Media unavailable or exceeds preview limit');
-
-      const token = this.config.getOrThrow('TELEGRAM_BOT_API_TOKEN', { infer: true });
-      const upstream = await fetch(`https://api.telegram.org/file/bot${token}/${file.file_path}`, {
-        signal: AbortSignal.timeout(15_000),
-        redirect: 'error',
-      });
-
-      if (!upstream.ok || !upstream.body) throw new Error('Media unavailable');
-
-      const type = upstream.headers.get('content-type') ?? '';
-
-      if (!/^(image\/(jpeg|png|webp)|video\/mp4)(;|$)/.test(type))
-        throw new Error('Unsupported preview');
-
-      response.setHeader('Content-Type', type);
-      response.setHeader('Cache-Control', 'private, no-store');
-
-      let bytes = 0;
-
-      async function* bounded() {
-        for await (const chunk of upstream.body!) {
-          bytes += chunk.length;
-
-          if (bytes > 20 * 1024 * 1024) throw new Error('Preview limit exceeded');
-
-          yield chunk;
-        }
-      }
-      await pipeline(Readable.from(bounded()), response);
+      await pipeline(stream, response);
     } catch {
       if (response.headersSent) response.destroy();
       else

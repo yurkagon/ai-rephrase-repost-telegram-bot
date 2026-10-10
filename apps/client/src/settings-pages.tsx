@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, ExternalLink, Plus, Radio, Trash2 } from 'lucide-react';
 
-import { api, body, establish, logout, useSession } from './api';
+import { api, body, updateUser, logout, useSession } from './api';
 import { defaults, type Channel, type Metrics, type Options, type Route, type User } from './types';
 import { ErrorNotice, Loading, OptionsForm, LanguageSwitch } from './components';
 
@@ -31,9 +31,7 @@ export function ChannelsPage() {
     mutationFn: async () => {
       const result = await api<User>('/auth/me');
 
-      await api('/auth/refresh', { method: 'POST' }).then((v) =>
-        establish(v as { accessToken: string; user: User }),
-      );
+      updateUser(result);
 
       return result;
     },
@@ -314,40 +312,31 @@ export function MetricsPage() {
       </header>
       <ErrorNotice error={result.error} />
       {result.data && (
-        <>
-          <div className="quota-line">
-            <strong>{t('daily')}</strong>
-            <span>
-              {result.data.todayUsed} / {result.data.dailyLimit}
-            </span>
-            <progress value={result.data.todayUsed} max={result.data.dailyLimit} />
-          </div>
-          <dl className="metrics-table">
-            {(
-              [
-                'calls',
-                'failures',
-                'inputTokens',
-                'outputTokens',
-                'averageDurationMs',
-                'averageRating',
-              ] as const
-            ).map((key) => (
-              <div key={key}>
-                <dt>{t(key)}</dt>
-                <dd>
-                  {result.data![key] == null
-                    ? t('noData')
-                    : key === 'averageDurationMs'
-                      ? `${(result.data![key]! / 1000).toFixed(1)} s`
-                      : key === 'averageRating'
-                        ? result.data![key]!.toFixed(1)
-                        : result.data![key]!.toLocaleString()}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </>
+        <dl className="metrics-table">
+          {(
+            [
+              'calls',
+              'failures',
+              'inputTokens',
+              'outputTokens',
+              'averageDurationMs',
+              'averageRating',
+            ] as const
+          ).map((key) => (
+            <div key={key}>
+              <dt>{t(key)}</dt>
+              <dd>
+                {result.data![key] == null
+                  ? t('noData')
+                  : key === 'averageDurationMs'
+                    ? `${(result.data![key]! / 1000).toFixed(1)} s`
+                    : key === 'averageRating'
+                      ? result.data![key]!.toFixed(1)
+                      : result.data![key]!.toLocaleString()}
+              </dd>
+            </div>
+          ))}
+        </dl>
       )}
     </section>
   );
@@ -359,10 +348,9 @@ export function AccountPage() {
   const cache = useQueryClient();
   const profile = useMutation({
     mutationFn: async (fields: Record<string, FormDataEntryValue>) => {
-      await api('/user/me', { method: 'PATCH', body: body(fields) });
-      await api<{ accessToken: string; user: User }>('/auth/refresh', { method: 'POST' }).then(
-        establish,
-      );
+      const user = await api<User>('/user/me', { method: 'PATCH', body: body(fields) });
+
+      updateUser(user);
     },
   });
   const password = useMutation({

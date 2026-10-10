@@ -1,0 +1,14 @@
+model Channel {
+  id         String   @id @default(uuid())
+  ownerId    String
+  owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  chatId     String   @unique
+  title      String
+  username   String?
+  canPublish Boolean
+  createdAt  DateTime @default(now())
+  sources    Route[]  @relation("Source")
+  targets    Route[]  @relation("Target")
+
+  @@index([ownerId])
+}

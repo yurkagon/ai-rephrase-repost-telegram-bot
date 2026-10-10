@@ -14,7 +14,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-import { RewriteOptionsDto } from '@/api/channels/channels.dto';
+import { RewriteOptionsDto } from '@/api/channels/dto/channels.dto';
 
 export class GenerateDto {
   @IsInt() @Min(0) revision: number;

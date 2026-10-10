@@ -1,0 +1,12 @@
+model PostRevision {
+  id        String   @id @default(uuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  version   Int
+  origin    String
+  html      String
+  captions  Json
+  createdAt DateTime @default(now())
+
+  @@unique([postId, version])
+}

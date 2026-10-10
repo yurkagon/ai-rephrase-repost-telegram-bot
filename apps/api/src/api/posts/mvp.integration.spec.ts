@@ -5,8 +5,6 @@ import { Queue } from 'bullmq';
 import { BullRegistrar, getQueueToken } from '@nestjs/bullmq';
 import { z } from 'zod';
 import type { Server } from 'node:http';
-import { ConfigService } from '@nestjs/config';
-import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { randomUUID } from 'node:crypto';
 import type { Message } from 'telegraf/types';
@@ -47,6 +45,7 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
       .object({
         id: z.string().optional(),
         accessToken: z.string().optional(),
+        refreshToken: z.string().optional(),
         url: z.string().optional(),
         user: z.object({ id: z.string(), role: z.string() }).optional(),
         role: z.string().optional(),
@@ -133,8 +132,6 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
       JWT_REFRESH_EXPIRATION_TIME: '7d',
       TELEGRAM_BOT_API_TOKEN: 'offline-test',
       OPENAI_API_KEY: 'offline-test',
-      AI_USER_DAILY_LIMIT: '20',
-      AI_PLATFORM_DAILY_LIMIT: '200',
       APP_URL: 'http://localhost:3001',
     });
 
@@ -165,7 +162,6 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
       .compile();
 
     app = module.createNestApplication();
-    app.use(cookieParser());
     app.setGlobalPrefix('api');
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
@@ -521,17 +517,25 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
     await posts.resolve(ownerId, post.id, false);
     expect((await db.post.findUniqueOrThrow({ where: { id: post.id } })).revision).toBe(2);
   });
-  it('reserves quotas atomically and rejects over-budget album requests', async () => {
-    const config = app.get(ConfigService);
+  it('generates repeated album drafts without daily allowances and reports usage metrics', async () => {
+    const post = await album('repeated-drafts', [501, 502]);
 
-    config.set('AI_USER_DAILY_LIMIT', 1);
+    for (let revision = 0; revision < 21; revision++) {
+      expect((await generate(post.id, revision)).status).toBe('DRAFT');
+    }
 
-    const post = await album('quota', [501, 502]);
+    expect(rewrite).toHaveBeenCalledTimes(42);
+    expect(await db.aiRun.count({ where: { postId: post.id } })).toBe(42);
+    expect(Object.keys(await posts.metrics(ownerId)).sort()).toEqual([
+      'averageDurationMs',
+      'averageRating',
+      'calls',
+      'failures',
+      'inputTokens',
+      'outputTokens',
+    ]);
+  }, 15_000);
 
-    await expect(posts.generate(ownerId, post.id, { revision: 0 })).rejects.toThrow('limit');
-    expect((await db.post.findUniqueOrThrow({ where: { id: post.id } })).status).toBe('INBOX');
-    config.set('AI_USER_DAILY_LIMIT', 20);
-  });
   it('blocks stale edits and unsafe HTML before saving', async () => {
     const post = await ingestAndFind(message(600));
 
@@ -543,21 +547,27 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
       posts.edit(ownerId, post.id, { revision: 1, html: '<script>bad</script>', captions: [] }),
     ).rejects.toThrow('HTML');
   });
-  it('uses secure cookie rotation, rejects reuse and disallows foreign Origin', async () => {
+  it('uses stateless JWT refresh, checks token types and disallows foreign Origin', async () => {
     const email = (await db.user.findUniqueOrThrow({ where: { id: ownerId } })).email;
     const login = await http()
       .post('/api/auth/login')
       .send({ email, password: 'correct-password' })
       .expect(201);
+    const tokens = json(login.body);
 
-    expect(login.body).not.toHaveProperty('refreshToken');
-
-    const cookie = z.array(z.string()).parse(login.headers['set-cookie'])[0];
-
-    expect(cookie).toContain('HttpOnly');
-    await http().post('/api/auth/refresh').set('Cookie', cookie).expect(201);
-    await http().post('/api/auth/refresh').set('Cookie', cookie).expect(401);
-    await http().post('/api/auth/refresh').set('Origin', 'https://attacker.example').expect(403);
+    expect(login.headers['set-cookie']).toBeUndefined();
+    expect(tokens.user!.id).toBe(ownerId);
+    await http().post('/api/auth/refresh').send({ refreshToken: tokens.refreshToken }).expect(201);
+    await http().post('/api/auth/refresh').send({ refreshToken: tokens.refreshToken }).expect(201);
+    await http().post('/api/auth/refresh').send({ refreshToken: tokens.accessToken }).expect(401);
+    await http().get('/api/auth/me').auth(tokens.refreshToken!, { type: 'bearer' }).expect(401);
+    await http().post('/api/auth/refresh').send({}).expect(400);
+    await http()
+      .post('/api/auth/refresh')
+      .send({ refreshToken: tokens.refreshToken })
+      .set('Origin', 'https://attacker.example')
+      .expect(403);
+    await http().post('/api/auth/logout').expect(404);
   });
   it('stops receiving source posts when the linked account loses admin rights', async () => {
     telegram.getChatMember.mockResolvedValueOnce({ status: 'left' });
@@ -565,8 +575,6 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
     expect(await db.post.count({ where: { routeId, sourceKey: 'message:701' } })).toBe(0);
   });
   it('records unsafe AI HTML as a failed run without saving a draft', async () => {
-    app.get(ConfigService).set('AI_USER_DAILY_LIMIT', 100);
-
     const post = await ingestAndFind(message(702));
 
     rewrite.mockResolvedValueOnce({
@@ -610,7 +618,6 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
     const restarted = new PostsService(
       db,
       bot as unknown as TelegramService,
-      app.get(ConfigService),
       queue,
       app.get(BullRegistrar),
       app.get(ChannelsService),
@@ -633,7 +640,6 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
     const restarted = new PostsService(
       db,
       bot as unknown as TelegramService,
-      app.get(ConfigService),
       app.get(getQueueToken('posts')),
       app.get(BullRegistrar),
       app.get(ChannelsService),
@@ -686,11 +692,11 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
     expect(await db.postRevision.count({ where: { postId: post.id } })).toBe(0);
     expect(sends.sendMessage).not.toHaveBeenCalled();
   });
-  it('password changes revoke both access and refresh sessions without email', async () => {
+  it('changes the password without server-side token sessions', async () => {
     const email = `password-${randomUUID()}@example.com`;
     const login = await register(email);
     const token = json(login.body).accessToken!;
-    const cookie = z.array(z.string()).parse(login.headers['set-cookie'])[0];
+    const refreshToken = json(login.body).refreshToken!;
 
     await http()
       .patch('/api/user/me/password')
@@ -701,8 +707,9 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
         confirmPassword: 'new-password',
       })
       .expect(204);
-    await http().get('/api/auth/me').auth(token, { type: 'bearer' }).expect(401);
-    await http().post('/api/auth/refresh').set('Cookie', cookie).expect(401);
+    await http().get('/api/auth/me').auth(token, { type: 'bearer' }).expect(200);
+    await http().post('/api/auth/refresh').send({ refreshToken }).expect(201);
+    await http().post('/api/auth/login').send({ email, password: 'correct-password' }).expect(401);
     await http().post('/api/auth/login').send({ email, password: 'new-password' }).expect(201);
   });
   it.each(['verify', 'resend', 'forgot', 'reset'])(

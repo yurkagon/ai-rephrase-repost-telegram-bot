@@ -6,14 +6,14 @@ Built with NestJS, React, PostgreSQL, Prisma, Redis, BullMQ, LangChain and OpenA
 
 ## What works
 
-- Registration without email confirmation, hashed passwords, profile password changes and revocable, rotating refresh sessions.
+- Registration without email confirmation, hashed passwords, profile password changes and stateless JWT access/refresh tokens.
 - One shared platform bot; Telegram account linking with an expiring, single-use deep link.
 - Administrator-verified channels and dynamic source → destination routes, with cycle prevention.
 - Persistent inbox for text, photos, videos and albums; deduplication by route and Telegram message/group IDs.
 - On-demand exact translation or editorial rewriting with language, tone, length and source-signature settings.
 - Telegram-compatible rich text editor, source/preview, version history and AI feedback.
 - Explicit confirmation before publishing; no automatic publication or fallback to the original after AI failure.
-- Durable operation records and a Redis-backed queue, daily quotas, token/latency/error metrics and a repository-owned eval suite.
+- Durable operation records and a Redis-backed queue, token/latency/error metrics and a repository-owned eval suite.
 
 ```mermaid
 flowchart LR
@@ -47,7 +47,7 @@ The API starts the bot's polling and queue workers together. A fatal Telegram st
 
 Open the client at `http://localhost:3001`. API documentation: `http://localhost:3000/docs`; OpenAPI JSON: `/openapi.json`; readiness: `/api/health`.
 
-`pnpm db:seed` optionally creates the configured SUPERADMIN. It is separate from normal registration; every publicly registered account is `USER`. Existing administrator roles are preserved by migrations. Existing accounts can sign in immediately; no email confirmation or email-based password recovery is required.
+`pnpm db:seed` optionally creates the configured SUPERADMIN. It is separate from normal registration; every publicly registered account is `USER`. Existing administrator roles are preserved by migrations. Existing accounts can sign in immediately; no email confirmation or email-based password recovery is required. Login returns access and refresh JWTs; refresh accepts `{ refreshToken }` in the request body. The client keeps the access token in memory and the refresh token in sessionStorage for the current tab. Logout clears the client tokens. Tokens cannot be revoked individually and remain valid until expiry, including after password changes.
 
 ### Connect your channels
 
@@ -65,9 +65,9 @@ The bot receives new posts only from channels where it has been added. This MVP 
 ```text
 apps/api/src/
   api/
-    auth/, user/     accounts, sessions and profiles
+    auth/, user/     accounts, JWT authentication and profiles
     channels/        Telegram linking, verified channels and route settings
-    posts/           ingestion, drafts, operations, quotas, queue worker and media proxy
+    posts/           ingestion, drafts, operations, queue worker and media proxy
   ai/                one AiService, provider settings, versioned prompts and rewrite options
   evals/             40-case dataset, deterministic checks and budgeted live runner
   telegram/          Telegraf construction, handlers transport and cancellable polling
@@ -85,8 +85,6 @@ Versioned system and developer prompts live in `apps/api/src/ai/prompts/rewrite.
 `AiService.rewrite(text, options)` returns validated `{ html, model, promptVersion, durationMs, inputTokens?, outputTokens?, outcome }`. The model's schema remains strictly `{ html: string }` with `jsonSchema`, `strict` and `includeRaw`. System/developer instructions are separate from the untrusted post. Default model: `gpt-6-luna`, overridden with `LLM_MODEL`; Responses API, low reasoning, 30-second timeout, and up to two transport retries.
 
 Exact translation preserves wording when the input already matches the target language. Editorial mode allows changing wording/tone/length while preserving facts. Meaningful links are retained; only a trailing source signature is removed when enabled, with the YouTube exception. Runtime HTML and Telegram length checks still apply: structured output alone does not ensure safe markup or correct meaning. See [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
-
-The default UTC daily limits are 20 logical AI calls per account and 200 globally, configured with `AI_USER_DAILY_LIMIT` / `AI_PLATFORM_DAILY_LIMIT`. An album reserves all non-empty caption calls atomically. Reservations remain consumed after failure because a provider request may already have happened; transport retries can increase actual provider usage. These are usage limits, not billing or exact dollar caps.
 
 ```sh
 # Offline: check the dataset and deterministic validators, no model requests
@@ -126,7 +124,7 @@ TEST_DATABASE_URL=postgresql://postgres:test@localhost:55439/copywrite_browser_t
 TEST_REDIS_URL=redis://localhost:56390/1 pnpm test:e2e
 ```
 
-Coverage includes ownership boundaries, public role injection, session rotation, bot permissions, routes, replayed updates, album order/deduplication, recovery after Redis failure and restart, shutdown during generation, password-change session revocation, AI failure blocking, optimistic draft revisions, quotas, ambiguous Telegram delivery and the registration → reviewed publication flow on desktop/mobile.
+Coverage includes ownership boundaries, public role injection, JWT expiry/type checks, bot permissions, routes, replayed updates, album order/deduplication, recovery after Redis failure and restart, shutdown during generation, password changes, AI failure blocking, optimistic draft revisions, ambiguous Telegram delivery and the registration → reviewed publication flow on desktop/mobile.
 
 ## Production deployment
 

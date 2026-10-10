@@ -16,12 +16,10 @@ model User {
   lastName  String @map("last_name")
   role      Role   @default(USER)
 
-  telegramId String? @unique
-  sessions RefreshSession[]
-  tokens AccountToken[]
-  channels Channel[]
-  routes Route[]
-  quota DailyQuota[]
+  telegramId String?        @unique
+  tokens     AccountToken[]
+  channels   Channel[]
+  routes     Route[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

@@ -8,22 +8,23 @@ import {
   OnModuleInit,
   OnModuleDestroy,
   OnApplicationBootstrap,
-  HttpException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { BullRegistrar, InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import type { Message } from 'telegraf/types';
+import { Readable } from 'node:stream';
 
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { Prisma } from '@generated/prisma/client';
 import { TelegramService } from '@/telegram/telegram.service';
-import type { Environment } from '@/config/env.schema';
 import { rewriteOptionsSchema } from '@/ai/ai.service';
 import { ChannelsService } from '@/api/channels/channels.service';
+import { telegramHtml, messageToHtml } from '@/telegram/telegram-html';
 
-import { telegramHtml, messageToHtml } from './telegram-html';
-import { EditPostDto, GenerateDto } from './posts.dto';
+import { EditPostDto, GenerateDto } from './dto/posts.dto';
+
+const MAX_MEDIA_PREVIEW_BYTES = 20 * 1024 * 1024;
 
 export const postInclude = {
   route: { include: { source: true, target: true } },
@@ -43,7 +44,6 @@ export class PostsService implements OnModuleInit, OnModuleDestroy, OnApplicatio
   constructor(
     private readonly db: PrismaService,
     private readonly bot: TelegramService,
-    private readonly config: ConfigService<Environment>,
     @InjectQueue('posts') private readonly queue: Queue,
     private readonly registrar: BullRegistrar,
     private readonly channels: ChannelsService,
@@ -226,6 +226,54 @@ export class PostsService implements OnModuleInit, OnModuleDestroy, OnApplicatio
     return post;
   }
 
+  async media(ownerId: string, postId: string, mediaId: string) {
+    const post = await this.owned(ownerId, postId);
+    const media = post.media.find((item) => item.id === mediaId);
+
+    if (!media) throw new NotFoundException('Media not found');
+
+    try {
+      const file = await this.bot.telegram.getFile(media.fileId);
+
+      if (!file.file_path || (file.file_size ?? 0) > MAX_MEDIA_PREVIEW_BYTES) {
+        throw new Error('Media unavailable or exceeds preview limit');
+      }
+
+      const url = await this.bot.telegram.getFileLink(file);
+      const upstream = await fetch(url, {
+        signal: AbortSignal.timeout(15_000),
+        redirect: 'error',
+      });
+      const body = upstream.body;
+
+      if (!upstream.ok || !body) throw new Error('Media unavailable');
+
+      const contentType = upstream.headers.get('content-type') ?? '';
+
+      if (!/^(image\/(jpeg|png|webp)|video\/mp4)(;|$)/.test(contentType)) {
+        throw new Error('Unsupported preview');
+      }
+
+      const bounded = async function* () {
+        let bytes = 0;
+
+        for await (const chunk of body) {
+          bytes += chunk.length;
+
+          if (bytes > MAX_MEDIA_PREVIEW_BYTES) throw new Error('Preview limit exceeded');
+
+          yield chunk;
+        }
+      };
+
+      return { stream: Readable.from(bounded()), contentType };
+    } catch {
+      throw new ServiceUnavailableException(
+        'Media preview is unavailable; the saved Telegram file can still be published',
+      );
+    }
+  }
+
   async list(ownerId: string, routeId?: string, cursor?: string, view?: string) {
     if (cursor) await this.owned(ownerId, cursor);
 
@@ -281,10 +329,6 @@ export class PostsService implements OnModuleInit, OnModuleDestroy, OnApplicatio
   async generate(ownerId: string, id: string, dto: GenerateDto) {
     const post = await this.owned(ownerId, id);
     const options = rewriteOptionsSchema.parse(dto.options ?? post.route.options);
-    const calls = (
-      post.media.length ? post.media.map((m) => m.originalCaption) : [post.originalHtml]
-    ).filter((t) => t.trim().length >= 2).length;
-    const day = new Date().toISOString().slice(0, 10);
 
     return this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))`;
@@ -302,23 +346,6 @@ export class PostsService implements OnModuleInit, OnModuleDestroy, OnApplicatio
         current.revision !== dto.revision
       )
         throw new ConflictException('Post changed; reload it');
-
-      for (const [scope, limit] of [
-        ['platform', this.config.getOrThrow('AI_PLATFORM_DAILY_LIMIT', { infer: true })],
-        [ownerId, this.config.getOrThrow('AI_USER_DAILY_LIMIT', { infer: true })],
-      ] as const) {
-        const quota = await tx.dailyQuota.upsert({
-          where: { scope_day: { scope, day } },
-          update: {},
-          create: { scope, day, userId: scope === 'platform' ? null : ownerId },
-        });
-        const reserved = await tx.dailyQuota.updateMany({
-          where: { id: quota.id, used: { lte: limit - calls } },
-          data: { used: { increment: calls } },
-        });
-
-        if (!reserved.count) throw new HttpException('Daily AI limit reached', 429);
-      }
 
       await tx.post.update({
         where: { id },
@@ -418,8 +445,7 @@ export class PostsService implements OnModuleInit, OnModuleDestroy, OnApplicatio
   }
 
   async metrics(ownerId: string) {
-    const day = new Date().toISOString().slice(0, 10);
-    const [runs, ratings, quota] = await Promise.all([
+    const [runs, ratings] = await Promise.all([
       this.db.aiRun.aggregate({
         where: { post: { route: { ownerId } } },
         _count: true,
@@ -427,7 +453,6 @@ export class PostsService implements OnModuleInit, OnModuleDestroy, OnApplicatio
         _avg: { durationMs: true },
       }),
       this.db.post.aggregate({ where: { route: { ownerId } }, _avg: { rating: true } }),
-      this.db.dailyQuota.findUnique({ where: { scope_day: { scope: ownerId, day } } }),
     ]);
     const failures = await this.db.aiRun.count({
       where: { post: { route: { ownerId } }, outcome: { not: 'success' } },
@@ -440,8 +465,6 @@ export class PostsService implements OnModuleInit, OnModuleDestroy, OnApplicatio
       averageDurationMs: runs._avg.durationMs,
       averageRating: ratings._avg.rating,
       failures,
-      todayUsed: quota?.used ?? 0,
-      dailyLimit: this.config.getOrThrow('AI_USER_DAILY_LIMIT', { infer: true }),
     };
   }
 }

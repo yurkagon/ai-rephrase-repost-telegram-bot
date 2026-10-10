@@ -26,7 +26,7 @@ export class AiService {
 
   constructor(config: ConfigService<Environment>) {
     const model = AiService.createLanguageModel(config);
-    this.modelName = model.getName();
+    this.modelName = config.getOrThrow('LLM_MODEL', { infer: true });
     this.model = model.withStructuredOutput(outputSchema, {
       name: 'telegram_rewrite',
       method: 'jsonSchema',
