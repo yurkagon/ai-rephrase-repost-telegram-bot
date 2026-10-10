@@ -60,9 +60,9 @@ export function AuthPage() {
       <main className="auth-main">
         <section className="auth-story">
           <div className="auth-channel">
-            <span className="channel-avatar">C</span>
+            <span className="channel-avatar">TD</span>
             <div>
-              <strong>Copywrite</strong>
+              <strong>{t('product')}</strong>
               <small>{t('subtitle')}</small>
             </div>
           </div>

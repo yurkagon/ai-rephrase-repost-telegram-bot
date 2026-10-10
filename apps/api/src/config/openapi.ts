@@ -1,7 +1,7 @@
 /** All endpoints live under this prefix so the rest of the URL space is the client's. */
 export const API_PREFIX = 'api';
 
-export const OPENAPI_TITLE = 'CopywriteRepostBot API';
+export const OPENAPI_TITLE = 'TeleDraft AI API';
 
 export const OPENAPI_DESCRIPTION = [
   'Telegram editorial workspace: accounts, verified channels, routes, versioned drafts, queued AI generation, confirmed publication and metrics.',

@@ -31,7 +31,7 @@ export class ChannelsService implements OnModuleInit {
       const token = ctx.startPayload;
 
       if (!token) {
-        await ctx.reply('Connect your account from CopywriteRepostBot → Channels.');
+        await ctx.reply('Connect your account from TeleDraft AI → Channels.');
 
         return;
       }

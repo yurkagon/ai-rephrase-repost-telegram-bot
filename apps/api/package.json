@@ -1,7 +1,7 @@
 {
   "name": "api",
   "version": "0.0.1",
-  "description": "CopywriteRepostBot API with Telegram reposting and Prisma authentication",
+  "description": "TeleDraft AI API for AI-powered Telegram drafting and reviewed publishing",
   "author": "Yurii Khvyshchuk",
   "private": true,
   "license": "MIT",

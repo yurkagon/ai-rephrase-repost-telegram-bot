@@ -24,13 +24,16 @@ export function LanguageSwitch() {
 }
 
 export function Brand() {
+  const { t } = useTranslation();
+
   return (
     <div className="brand">
       <span className="brand-mark">
         <Send size={21} />
       </span>
       <span>
-        Copywrite<small>Telegram workspace</small>
+        {t('product')}
+        <small>Telegram workspace</small>
       </span>
     </div>
   );

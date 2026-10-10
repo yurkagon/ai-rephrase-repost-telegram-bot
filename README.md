@@ -1,8 +1,10 @@
-# CopywriteRepostBot
+# TeleDraft AI
 
 A full-stack Telegram editorial workspace: collect channel posts, prepare structured AI drafts, review the result, and publish the exact version you approved.
 
 Built with NestJS, React, PostgreSQL, Prisma, Redis, BullMQ, LangChain and OpenAI. The interface supports Ukrainian and English and follows Telegram Desktop's familiar layout. AI output language is selected independently.
+
+The package name is `teledraft-ai`. Existing Docker project/database identifiers and the browser token-storage key retain their legacy names so the branding change reuses existing data and sign-ins. Keep your local `.env` values when updating an existing installation.
 
 ## What works
 
@@ -72,7 +74,7 @@ apps/api/src/
     channels/        Telegram linking, verified channels and route settings
     posts/           ingestion, drafts, operations, queue worker and media proxy
   ai/                one AiService, provider settings, versioned prompts and rewrite options
-  evals/             40-case dataset, deterministic checks and budgeted live runner
+  evals/             12 model/prompt scenarios and a budgeted live runner
   telegram/          Telegraf construction, handlers transport and cancellable polling
   config/            Zod-validated server environment
   infra/             Prisma and Redis
@@ -83,7 +85,7 @@ Feature modules depend on Telegram transport and AI, without reverse imports or 
 
 ## AI contract and evaluation
 
-Versioned system and developer prompts live in `apps/api/src/ai/prompts/rewrite.ts`. The application and eval runner share this module; validated rewrite options supply its dynamic instructions. `AiService` handles model creation, response validation and execution metadata. Zod schemas and option defaults are declared below the service class in `ai.service.ts`. The eval judge reuses its static `createLanguageModel()` factory.
+Versioned system and developer prompts live in `apps/api/src/ai/prompts/rewrite.ts`. The application and eval runner share this module; validated rewrite options supply its dynamic instructions. `AiService` handles model creation, response validation and execution metadata. Zod schemas and option defaults are declared below the service class in `ai.service.ts`.
 
 Routes support optional rewrite rules (up to 2000 characters), editable on the Routes page. They are stored in the existing route options and snapshotted into each generation operation and AI run. The developer prompt applies them within the fixed rules for factual accuracy, language and Telegram HTML; an empty field preserves the default behavior.
 
@@ -95,22 +97,24 @@ Rewriting supports light, moderate (default) and deep rewrite strength in route 
 
 Every generation rewrites the post in the selected output language, including posts already written in that language. Tone, length, rewrite strength and custom instructions guide the wording while preserving facts. Meaningful links are retained; only a trailing source signature is removed when enabled, with the YouTube exception. Runtime HTML and Telegram length checks still apply: structured output alone does not ensure safe markup or correct meaning. See [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
 
+The small eval suite in `apps/api/src/evals/cases.ts` contains 12 synthetic posts with concrete checks and a manual review question per case. Every eval calls the production `AiService` with the current model and prompts. It covers facts and numbers, both output languages, HTML/links, source signatures and YouTube, emoji, route/post rules, embedded instructions, deep rewriting and concise captions. There is no offline reference scoring or LLM judge.
+
 ```sh
-# Offline: check the dataset and deterministic validators, no model requests
-pnpm evals
+# Real OpenAI requests: one generation for each of the 12 cases
+pnpm evals --budget-calls 12
 
-# Live: explicit logical-call budget, reports go to apps/api/eval-reports/
-pnpm --filter api evals --live --budget-calls 40 --out eval-reports/candidate.json
+# Quickly check the emoji instruction with one generation
+pnpm evals --case emoji --budget-calls 1
 
-# Optional structured LLM grading; budget includes generation + grading
-pnpm --filter api evals --live --judge --budget-calls 80 --out eval-reports/judged.json
-
-# Compare models or prompt revisions on the same versioned dataset
-pnpm --filter api evals --live --budget-calls 40 --model YOUR_MODEL \
-  --out eval-reports/alternative.json --compare eval-reports/candidate.json
+# Save a named result for comparing prompt changes or models
+LLM_MODEL=YOUR_MODEL pnpm evals --budget-calls 12 --out eval-reports/candidate.json
 ```
 
-Keep baseline reports before editing a prompt and bump `promptVersion` when its rules change. Reports contain each case's failures, available token usage, latency, model and prompt version. Deterministic checks cover required facts/links, source removal, safe HTML and message lengths; they do not prove rewrite quality. Live LLM grades are advisory and must be calibrated with human review, following [OpenAI evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices). An [example offline report](apps/api/src/evals/examples/reference-check.md) and its JSON are included in the repository. Never present `reference_self_check` results as measured model quality. CI performs no paid API calls.
+The runner loads `OPENAI_API_KEY` and `LLM_MODEL` from the root `.env`, with environment overrides and the same validation/default model as the API. It does not start Telegram or connect to PostgreSQL/Redis. The call budget counts generations; the existing transport retries can add HTTP requests. A failed check returns a nonzero exit code. A provider failure stops the run and records it as incomplete.
+
+Reports under `apps/api/eval-reports/` contain the inputs, real outputs, settings, system/developer prompts, prompt version, model, failures, duration and available token usage. Use separate output files to review prompt/model changes side by side. Read every result against its `review` question: script detection, preserved numbers/links and emoji checks do not prove factual equivalence, fluency, tone or a good rewrite. Human review complements task-specific checks, following [OpenAI evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices).
+
+Normal Jest/CI tests only verify runner behavior with local stubs. They make no paid calls and are not model-quality results. Live evals run only through the explicit command above.
 
 ## Verification
 
@@ -124,12 +128,12 @@ pnpm build
 Integration and browser tests require **isolated, migrated** PostgreSQL and Redis. External Telegram and OpenAI are replaced with local stubs. Browser tests require a dedicated database whose name ends in `_test`; their test-only server resets its data between scenarios. Never point these variables at production.
 
 ```sh
-DATABASE_URL=postgresql://postgres:test@localhost:55439/copywrite_browser_test pnpm db:deploy
-TEST_DATABASE_URL=postgresql://postgres:test@localhost:55439/copywrite_browser_test \
+DATABASE_URL=postgresql://postgres:test@localhost:55439/teledraft_browser_test pnpm db:deploy
+TEST_DATABASE_URL=postgresql://postgres:test@localhost:55439/teledraft_browser_test \
 TEST_REDIS_URL=redis://localhost:56390/1 pnpm test:integration
 
 pnpm --filter client exec playwright install chromium
-TEST_DATABASE_URL=postgresql://postgres:test@localhost:55439/copywrite_browser_test \
+TEST_DATABASE_URL=postgresql://postgres:test@localhost:55439/teledraft_browser_test \
 TEST_REDIS_URL=redis://localhost:56390/1 pnpm test:e2e
 ```
 

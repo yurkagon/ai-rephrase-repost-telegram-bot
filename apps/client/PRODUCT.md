@@ -1,4 +1,4 @@
-# CopywriteRepostBot
+# TeleDraft AI
 
 A workspace for channel owners and editors to turn incoming Telegram posts into reviewed publications.
 Flow: register without email confirmation → connect Telegram → add channels and a source-to-target route → inbox → AI draft → edit → publish.

@@ -14,7 +14,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: test
-          POSTGRES_DB: copywrite_ci_test
+          POSTGRES_DB: teledraft_ci_test
         ports: ['5432:5432']
         options: >-
           --health-cmd "pg_isready -U postgres"
@@ -45,15 +45,15 @@ jobs:
 
       - run: pnpm db:deploy
         env:
-          DATABASE_URL: postgresql://postgres:test@localhost:5432/copywrite_ci_test
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/teledraft_ci_test
       - run: pnpm test:integration
         env:
-          TEST_DATABASE_URL: postgresql://postgres:test@localhost:5432/copywrite_ci_test
+          TEST_DATABASE_URL: postgresql://postgres:test@localhost:5432/teledraft_ci_test
           TEST_REDIS_URL: redis://localhost:6379/1
       - run: pnpm --filter client exec playwright install --with-deps chromium
       - run: pnpm test:e2e
         env:
-          TEST_DATABASE_URL: postgresql://postgres:test@localhost:5432/copywrite_ci_test
+          TEST_DATABASE_URL: postgresql://postgres:test@localhost:5432/teledraft_ci_test
           TEST_REDIS_URL: redis://localhost:6379/2
       - uses: actions/upload-artifact@v4
         if: failure()

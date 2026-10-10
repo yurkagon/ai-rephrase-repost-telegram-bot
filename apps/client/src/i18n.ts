@@ -2,7 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
 const en = {
-  product: 'Copywrite',
+  product: 'TeleDraft AI',
   subtitle: 'Your Telegram editorial workspace',
   inbox: 'Inbox',
   channels: 'Channels',
@@ -200,7 +200,7 @@ const en = {
 };
 
 const uk: typeof en = {
-  product: 'Copywrite',
+  product: 'TeleDraft AI',
   subtitle: 'Редактор ваших Telegram-каналів',
   inbox: 'Вхідні',
   channels: 'Канали',

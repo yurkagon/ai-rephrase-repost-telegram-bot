@@ -1,5 +1,5 @@
 ---
-name: CopywriteRepostBot
+name: TeleDraft AI
 description: Compact Telegram-inspired workspace for reviewing channel publications
 colors:
   accent: '#087abb'
@@ -119,13 +119,13 @@ components:
     backgroundColor: '{colors.preview}'
 ---
 
-# Design System: CopywriteRepostBot
+# Design System: TeleDraft AI
 
 ## Overview
 
 **Creative North Star: "Telegram-inspired editorial workspace"**
 
-Telegram Desktop is the approved visual authority: compact channel lists, blue actions, light surfaces, and legible messages. CopywriteRepostBot keeps its own Copywrite wordmark and circular send mark. This is an operating interface whose visual hierarchy follows the editor's work.
+Telegram Desktop is the approved visual authority: compact channel lists, blue actions, light surfaces, and legible messages. TeleDraft AI keeps its own TeleDraft AI wordmark and circular send mark. This is an operating interface whose visual hierarchy follows the editor's work.
 
 White lists and controls sit beside a pale blue-gray reading canvas. The source, editable draft, and tinted target preview remain distinct. UI language and generated output language are independently selected between Ukrainian and English.
 

@@ -10,7 +10,7 @@ import { API_PREFIX } from '@/config/openapi';
 
 import { useClientApp } from './client-app';
 
-const INDEX_HTML = '<!doctype html><title>CopywriteRepostBot</title><div id="root"></div>';
+const INDEX_HTML = '<!doctype html><title>TeleDraft AI</title><div id="root"></div>';
 
 const ASSET_JS = 'console.log("bundle")';
 
