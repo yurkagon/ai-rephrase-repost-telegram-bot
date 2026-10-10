@@ -2,7 +2,16 @@ import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { BarChart3, Inbox, LogOut, Radio, Route as RouteIcon, Send, UserRound } from 'lucide-react';
+import {
+  BarChart3,
+  BookOpen,
+  Inbox,
+  LogOut,
+  Radio,
+  Route as RouteIcon,
+  Send,
+  UserRound,
+} from 'lucide-react';
 
 import { logout, restore, useSession } from './api';
 import { Brand, LanguageSwitch, Loading } from './components';
@@ -10,6 +19,7 @@ import { AuthPage } from './auth-page';
 import { AccountPage, ChannelsPage, MetricsPage, RoutesPage } from './settings-pages';
 import { Workspace } from './workspace';
 import { edits } from './editor-state';
+import { GuidePage } from './guide-page';
 
 import './i18n';
 
@@ -56,6 +66,7 @@ function Application() {
     { path: '/history', label: 'history', icon: Send },
     { path: '/metrics', label: 'metrics', icon: BarChart3 },
     { path: '/account', label: 'account', icon: UserRound },
+    { path: '/guide', label: 'guide', icon: BookOpen },
   ];
 
   return (
@@ -114,6 +125,7 @@ function Application() {
           <Route path="/routes" element={<RoutesPage />} />
           <Route path="/metrics" element={<MetricsPage />} />
           <Route path="/account" element={<AccountPage />} />
+          <Route path="/guide" element={<GuidePage />} />
           <Route path="*" element={<Navigate to="/workspace" replace />} />
         </Routes>
       </main>

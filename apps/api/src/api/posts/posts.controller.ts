@@ -65,6 +65,13 @@ export class PostsController {
     return this.posts.publish(owner, id, dto.revision);
   }
 
+  @Post(':id/discard')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Discard an unpublished post and delete its draft versions' })
+  discard(@CurrentUser('id') owner: string, @Param('id') id: string, @Body() dto: RevisionDto) {
+    return this.posts.discard(owner, id, dto.revision);
+  }
+
   @Post(':id/resolve')
   @ApiOperation({ summary: 'Manually resolve ambiguous delivery after checking Telegram' })
   resolve(@CurrentUser('id') owner: string, @Param('id') id: string, @Body() dto: ResolveDto) {

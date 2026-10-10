@@ -13,6 +13,7 @@ Built with NestJS, React, PostgreSQL, Prisma, Redis, BullMQ, LangChain and OpenA
 - On-demand exact translation or editorial rewriting with language, tone, length and source-signature settings.
 - Telegram-compatible rich text editor, source/preview and version history.
 - Explicit confirmation before publishing; no automatic publication or fallback to the original after AI failure.
+- Discard unwanted inbox posts with confirmation. Draft versions are deleted; the original record stays to prevent replayed Telegram updates from restoring the post. Posts cannot be discarded while generating, publishing or awaiting delivery verification, or after publication.
 - Durable operation records and a Redis-backed queue, token/latency/error metrics and a repository-owned eval suite.
 
 ```mermaid
@@ -57,6 +58,8 @@ Open the client at `http://localhost:3001`. API documentation: `http://localhost
 4. Add each channel by `@username`, or its numeric ID without a minus sign (e.g. `1001234567890`) for a private channel. Signed IDs are also accepted. The linked Telegram user must administrate both channels.
 5. Create a route, choose the AI defaults, and publish a **new** test post in the source channel.
 6. Select it from Inbox, generate a draft, edit/save if needed, then confirm publication.
+
+The app’s **Guide** page (`/guide`) explains the two-channel setup, bot administrator permissions, manual forwarding into the collection channel, and the review/publish/discard workflow in Ukrainian and English.
 
 The bot receives new posts only from channels where it has been added. This MVP does not scrape other channels or import existing history. A Telegram account/channel can belong to one platform account; teams are outside this release.
 

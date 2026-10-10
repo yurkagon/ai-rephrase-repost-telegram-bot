@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -101,7 +101,7 @@ function renderPost(post: Post) {
     <QueryClientProvider client={cache}>
       <MemoryRouter initialEntries={['/workspace/post']}>
         <Routes>
-          <Route path="/workspace/:postId" element={<Workspace />} />
+          <Route path="/workspace/:postId?" element={<Workspace />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -111,6 +111,69 @@ function renderPost(post: Post) {
 }
 
 beforeEach(() => vi.mocked(api).mockReset());
+
+describe('discarding posts', () => {
+  beforeEach(() => {
+    HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
+      this.open = true;
+    });
+  });
+
+  it('requires confirmation and leaves the editor after discarding, including unsaved changes', async () => {
+    const post = fixture(4);
+    renderPost(post);
+    const editor = await screen.findByRole('textbox', { name: 'Post HTML' });
+    fireEvent.change(editor, { target: { value: 'Unsaved changes' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Відхилити допис' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Скасувати' }));
+    expect(api).not.toHaveBeenCalledWith('/posts/post/discard', expect.anything());
+    expect(editor).toHaveValue('Unsaved changes');
+
+    vi.mocked(api).mockImplementation((path) =>
+      Promise.resolve(path === '/posts/post/discard' ? undefined : { posts: [], nextCursor: null }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Відхилити допис' }));
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Відхилити допис' }),
+    );
+
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Post HTML' })).toBeNull());
+    expect(api).toHaveBeenCalledWith('/posts/post/discard', {
+      method: 'POST',
+      body: JSON.stringify({ revision: 1 }),
+    });
+  });
+
+  it('keeps the draft and shows an error if discarding fails', async () => {
+    renderPost(fixture(0));
+    const button = await screen.findByRole('button', { name: 'Відхилити допис' });
+    vi.mocked(api).mockRejectedValueOnce(new Error('Discard failed'));
+    fireEvent.click(button);
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Відхилити допис' }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getAllByRole('alert')[0]).toHaveTextContent('Discard failed'),
+    );
+    expect(screen.getByRole('textbox', { name: 'Post HTML' })).toHaveValue('<b>Draft</b>');
+  });
+
+  it.each(['GENERATING', 'PUBLISHING'])('disables discard while %s', async (status) => {
+    renderPost({ ...fixture(0), status });
+    expect(await screen.findByRole('button', { name: 'Відхилити допис' })).toBeDisabled();
+  });
+
+  it.each(['PUBLISHED', 'PUBLICATION_UNKNOWN', 'SKIPPED'])(
+    'hides discard for %s',
+    async (status) => {
+      renderPost({ ...fixture(0), status });
+      await screen.findByRole('textbox', { name: 'Post HTML' });
+      expect(screen.queryByRole('button', { name: 'Відхилити допис' })).toBeNull();
+    },
+  );
+});
 
 describe('AI thinking feedback', () => {
   it.each(['DRAFT', 'FAILED'])('stays busy through generation until %s', async (status) => {
@@ -167,7 +230,7 @@ describe('AI thinking feedback', () => {
 });
 
 describe('one HTML body per post', () => {
-  it.each([0, 1, 4])('shows one editor and one preview body for %s media', async (count) => {
+  it.each([0, 1, 3, 4, 10])('shows one editor and one preview body for %s media', async (count) => {
     const post = fixture(count);
     const { container } = renderPost(post);
     const editor = await screen.findByRole('textbox', { name: 'Post HTML' });

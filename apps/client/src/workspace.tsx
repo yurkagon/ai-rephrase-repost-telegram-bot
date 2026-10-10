@@ -2,7 +2,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Check, ChevronDown, Inbox, Send, Sparkles } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, Inbox, Send, Sparkles, Trash2 } from 'lucide-react';
 
 import { api, body } from './api';
 import type { Options, Post, Route } from './types';
@@ -169,10 +169,14 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
   const [html, setHtml] = useState(revision?.html ?? originalHtml);
   const [options, setOptions] = useState<Options>(post.route.options);
   const [dirty, setDirty] = useState(false);
-  const [confirmation, setConfirmation] = useState(false);
-  const locked = ['GENERATING', 'PUBLISHING', 'PUBLISHED', 'PUBLICATION_UNKNOWN'].includes(
-    post.status,
-  );
+  const [confirmation, setConfirmation] = useState<'publish' | 'discard' | null>(null);
+  const locked = [
+    'GENERATING',
+    'PUBLISHING',
+    'PUBLISHED',
+    'PUBLICATION_UNKNOWN',
+    'SKIPPED',
+  ].includes(post.status);
 
   useEffect(() => {
     edits.dirty = dirty;
@@ -224,7 +228,7 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
     mutationFn: () =>
       api(`/posts/${post.id}/publish`, { method: 'POST', body: body({ revision: post.revision }) }),
     onSuccess: () => {
-      setConfirmation(false);
+      setConfirmation(null);
       invalidate();
     },
   });
@@ -233,7 +237,26 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
       api(`/posts/${post.id}/resolve`, { method: 'POST', body: body({ published }) }),
     onSuccess: invalidate,
   });
-  const working = generate.isPending || save.isPending || publish.isPending || resolve.isPending;
+  const discard = useMutation({
+    mutationFn: () =>
+      api(`/posts/${post.id}/discard`, {
+        method: 'POST',
+        body: body({ revision: post.revision }),
+      }),
+    onSuccess: async () => {
+      edits.dirty = false;
+      setDirty(false);
+      back();
+      cache.removeQueries({ queryKey: ['post', post.id] });
+      await cache.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+  const working =
+    generate.isPending ||
+    save.isPending ||
+    publish.isPending ||
+    resolve.isPending ||
+    discard.isPending;
   const generating = generate.isPending || post.status === 'GENERATING';
 
   return (
@@ -253,7 +276,14 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
       </header>
       <div className="detail-scroll">
         <ErrorNotice
-          error={generate.error ?? save.error ?? publish.error ?? resolve.error ?? post.error}
+          error={
+            generate.error ??
+            save.error ??
+            publish.error ??
+            resolve.error ??
+            discard.error ??
+            post.error
+          }
         />
         {post.status === 'PUBLICATION_UNKNOWN' && (
           <div className="unknown-state">
@@ -278,13 +308,19 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
             <time>{new Date(post.createdAt).toLocaleString()}</time>
           </div>
           <div className="message original-message">
-            {post.media.map((media) => (
-              <MediaPreview key={media.id} postId={post.id} media={media} />
-            ))}
+            {post.media.length > 0 && (
+              <div
+                className={`media-gallery${post.media.length > 1 ? ' media-gallery-album' : ''}`}
+              >
+                {post.media.map((media) => (
+                  <MediaPreview key={media.id} postId={post.id} media={media} />
+                ))}
+              </div>
+            )}
             <Html html={originalHtml} />
           </div>
         </div>
-        {!['PUBLISHED', 'PUBLICATION_UNKNOWN'].includes(post.status) && (
+        {!['PUBLISHED', 'PUBLICATION_UNKNOWN', 'SKIPPED'].includes(post.status) && (
           <div className="ai-controls">
             <OptionsForm value={options} onChange={setOptions} disabled={locked || working} />
             <button
@@ -333,9 +369,15 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
             </div>
             <div className="message preview-message">
               <strong className="preview-channel">{post.route.target.title}</strong>
-              {post.media.map((media) => (
-                <MediaPreview key={media.id} postId={post.id} media={media} />
-              ))}
+              {post.media.length > 0 && (
+                <div
+                  className={`media-gallery${post.media.length > 1 ? ' media-gallery-album' : ''}`}
+                >
+                  {post.media.map((media) => (
+                    <MediaPreview key={media.id} postId={post.id} media={media} />
+                  ))}
+                </div>
+              )}
               <Html html={html} />
               <small className="message-time">
                 {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -361,8 +403,16 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
           </details>
         )}
       </div>
-      {!['PUBLISHED', 'PUBLICATION_UNKNOWN'].includes(post.status) && (
+      {!['PUBLISHED', 'PUBLICATION_UNKNOWN', 'SKIPPED'].includes(post.status) && (
         <footer className="editor-actions">
+          <button
+            className="secondary destructive"
+            disabled={locked || working}
+            onClick={() => setConfirmation('discard')}
+          >
+            <Trash2 size={16} />
+            {t('discardPost')}
+          </button>
           <button
             className="secondary"
             disabled={
@@ -376,7 +426,7 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
             className="primary"
             disabled={post.status !== 'DRAFT' || dirty || working}
             title={dirty ? t('saveFirst') : undefined}
-            onClick={() => setConfirmation(true)}
+            onClick={() => setConfirmation('publish')}
           >
             <Send size={16} />
             {t('publish')}
@@ -384,21 +434,28 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
         </footer>
       )}
       {confirmation && (
-        <ConfirmDialog onCancel={() => setConfirmation(false)}>
-          <h2 id="confirm-title">{t('publishConfirm')}</h2>
-          <p>{post.route.target.title}</p>
+        <ConfirmDialog onCancel={() => setConfirmation(null)}>
+          <h2 id="confirm-title">
+            {t(confirmation === 'discard' ? 'discardPostConfirm' : 'publishConfirm')}
+          </h2>
+          <p>{confirmation === 'discard' ? t('discardPostHint') : post.route.target.title}</p>
           <button
-            autoFocus
-            className="primary"
-            disabled={publish.isPending}
-            onClick={() => publish.mutate()}
+            data-autofocus={confirmation === 'publish' || undefined}
+            className={confirmation === 'discard' ? 'secondary destructive' : 'primary'}
+            disabled={working}
+            onClick={() => (confirmation === 'discard' ? discard.mutate() : publish.mutate())}
           >
-            {t('publish')}
+            {t(confirmation === 'discard' ? 'discardPost' : 'publish')}
           </button>
-          <button className="secondary" onClick={() => setConfirmation(false)}>
+          <button
+            data-autofocus={confirmation === 'discard' || undefined}
+            className="secondary"
+            disabled={working}
+            onClick={() => setConfirmation(null)}
+          >
             {t('cancel')}
           </button>
-          <ErrorNotice error={publish.error} />
+          <ErrorNotice error={confirmation === 'discard' ? discard.error : publish.error} />
         </ConfirmDialog>
       )}
     </>

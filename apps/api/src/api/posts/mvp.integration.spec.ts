@@ -361,6 +361,89 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
     expect(sends.sendMessage).toHaveBeenCalledTimes(1);
     expect((await db.post.findUniqueOrThrow({ where: { id: post.id } })).status).toBe('PUBLISHED');
   });
+
+  it('discards owned drafts, deletes their versions and does not restore replayed posts', async () => {
+    const post = await ingestAndFind(message(301));
+    await generate(post.id);
+    await posts.edit(ownerId, post.id, { revision: 1, html: 'Edited draft', captions: [] });
+
+    await http()
+      .post(`/api/posts/${post.id}/discard`)
+      .auth(otherAccess, { type: 'bearer' })
+      .send({ revision: 2 })
+      .expect(404);
+    await http()
+      .post(`/api/posts/${post.id}/discard`)
+      .auth(access, { type: 'bearer' })
+      .send({ revision: 1 })
+      .expect(409);
+    await http()
+      .post(`/api/posts/${post.id}/discard`)
+      .auth(access, { type: 'bearer' })
+      .send({ revision: -1 })
+      .expect(400);
+    expect(await db.postRevision.count({ where: { postId: post.id } })).toBe(2);
+
+    await http()
+      .post(`/api/posts/${post.id}/discard`)
+      .auth(access, { type: 'bearer' })
+      .send({ revision: 2 })
+      .expect(204);
+    expect((await db.post.findUniqueOrThrow({ where: { id: post.id } })).status).toBe('SKIPPED');
+    expect(await db.postRevision.count({ where: { postId: post.id } })).toBe(0);
+    expect((await posts.list(ownerId)).posts.some((item) => item.id === post.id)).toBe(false);
+    expect(
+      (await posts.list(ownerId, undefined, undefined, 'history')).posts.some(
+        (item) => item.id === post.id,
+      ),
+    ).toBe(false);
+
+    await posts.ingest(message(301));
+    expect(await db.post.count({ where: { routeId, sourceKey: 'message:301' } })).toBe(1);
+    await expect(posts.generate(ownerId, post.id, { revision: 3 })).rejects.toThrow();
+    await expect(posts.publish(ownerId, post.id, 2)).rejects.toThrow();
+    expect(await db.aiRun.count({ where: { postId: post.id } })).toBe(1);
+    for (const send of Object.values(sends)) expect(send).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'COLLECTING',
+    'GENERATING',
+    'PUBLISHING',
+    'PUBLISHED',
+    'PUBLICATION_UNKNOWN',
+    'SKIPPED',
+  ] as const)('refuses to discard %s', async (status) => {
+    const post = await db.post.create({
+      data: { routeId, sourceKey: `discard:${status}`, originalHtml: 'Original', status },
+    });
+    await expect(posts.discard(ownerId, post.id, 0)).rejects.toThrow(
+      'Post cannot be discarded now',
+    );
+    expect((await db.post.findUniqueOrThrow({ where: { id: post.id } })).status).toBe(status);
+  });
+
+  it('atomically chooses between discarding and queuing publication', async () => {
+    const post = await ingestAndFind(message(302));
+    await generate(post.id);
+    const outcomes = await Promise.allSettled([
+      posts.discard(ownerId, post.id, 1),
+      posts.publish(ownerId, post.id, 1),
+    ]);
+    expect(outcomes.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    const current = await db.post.findUniqueOrThrow({
+      where: { id: post.id },
+      include: { revisions: true, operations: true },
+    });
+    if (current.status === 'SKIPPED') {
+      expect(current.revisions).toHaveLength(0);
+      expect(current.operations.some((operation) => operation.kind === 'PUBLISH')).toBe(false);
+    } else {
+      expect(current.status).toBe('PUBLISHING');
+      expect(current.revisions).toHaveLength(1);
+      expect(current.operations.some((operation) => operation.kind === 'PUBLISH')).toBe(true);
+    }
+  });
   it.each(['text', 'photo', 'video'])('publishes %s only after review', async (type) => {
     const id = type === 'text' ? 40 : type === 'photo' ? 41 : 42;
     const msg =

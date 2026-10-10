@@ -382,6 +382,22 @@ export class PostsService implements OnModuleInit, OnModuleDestroy, OnApplicatio
     });
   }
 
+  async discard(ownerId: string, id: string, revision: number) {
+    await this.owned(ownerId, id);
+
+    await this.db.$transaction(async (tx) => {
+      const updated = await tx.post.updateMany({
+        where: { id, revision, route: { ownerId }, status: { in: ['INBOX', 'DRAFT', 'FAILED'] } },
+        data: { status: 'SKIPPED', revision: { increment: 1 }, error: null, failureStage: null },
+      });
+
+      if (!updated.count) throw new ConflictException('Post cannot be discarded now; reload it');
+
+      // Keep the source record so a replayed Telegram update cannot recreate the post.
+      await tx.postRevision.deleteMany({ where: { postId: id } });
+    });
+  }
+
   async generate(ownerId: string, id: string, dto: GenerateDto) {
     const post = await this.owned(ownerId, id);
     const options = rewriteOptionsSchema.parse(dto.options ?? post.route.options);

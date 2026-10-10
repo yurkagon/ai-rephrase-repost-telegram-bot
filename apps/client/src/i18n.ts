@@ -10,6 +10,39 @@ const en = {
   history: 'Published',
   metrics: 'AI activity',
   account: 'Account',
+  guide: 'Guide',
+  guideTitle: 'How it works',
+  guideIntro:
+    'Collect posts in one Telegram channel, prepare them here, and publish reviewed results to another channel.',
+  guideFlowTitle: 'From source to publication',
+  guideOtherChannels: 'Other channels',
+  guideCollectionChannel: 'Your collection channel',
+  guideManual:
+    'You forward posts into the collection channel. AI generation and publication start only when you choose them on the site.',
+  guideStepsTitle: 'Set up once, then work from Inbox',
+  guideChannelsTitle: 'Prepare two different Telegram channels',
+  guideChannelsBody:
+    'Use one channel to collect posts — your “scraper” channel — and another for publication. Both must be channels you administer. They may be public or private. The collection channel receives the original posts; the publication channel receives only the results you approve.',
+  guideBotTitle: 'Connect Telegram and add the bot as administrator',
+  guideBotBody:
+    'On the Channels page, connect your Telegram account and open the platform bot using “Open the bot”. In Telegram, open each channel’s settings → Administrators and add that bot to both channels. In the publication channel, also allow the bot to post messages. Then add both channels on the site by @username or numeric ID; the page explains how to find a private channel’s ID.',
+  guideRouteTitle: 'Create an active route',
+  guideRouteBody:
+    'On the Routes page, select your collection channel as the source and your publication channel as the destination. Choose the default AI settings and keep the route active. A route tells the app where to collect posts and where to publish the approved drafts.',
+  guideForwardTitle: 'Forward a post into the collection channel',
+  guideForwardBody:
+    'In Telegram, choose a post from another channel and forward it into your collection channel, not to the bot in a private chat. You can also write a new post there. Text, photos, videos and albums are supported. The bot receives the new channel post and it appears in Inbox without starting AI or publishing anything.',
+  guideRewriteTitle: 'Create and edit an AI draft',
+  guideRewriteBody:
+    'Open the post in Inbox, choose exact translation or editorial rewrite, and select Ukrainian or English as the output language. Create the AI draft, wait for processing, then review the result. Edit the wording and formatting if needed, check the Telegram preview, and save your changes. Always check facts and links yourself.',
+  guidePublishTitle: 'Publish or discard the post',
+  guidePublishBody:
+    'When the saved draft is ready, click “Publish to channel” and confirm. The bot sends that version with its media to the destination channel; the post then appears in Published. If you do not want to publish it, use “Discard post”: after confirmation it leaves Inbox and its drafts are deleted.',
+  guideTroubleshootingTitle: 'The post is not in Inbox?',
+  guideTroubleshootingBody:
+    'Check that you linked the Telegram account that administers both channels, added the bot as administrator to both, and created an active route with the collection channel as its source. Forward a new test post into that channel and open Inbox.',
+  guideNewPostsOnly:
+    'Only new posts received after setup are collected. The app does not import channel history or automatically read other channels: you choose which posts to forward.',
   logout: 'Sign out',
   login: 'Sign in',
   register: 'Create account',
@@ -91,6 +124,12 @@ const en = {
   save: 'Save changes',
   publish: 'Publish to channel',
   publishConfirm: 'Publish this saved draft to the destination channel?',
+  discardPost: 'Discard post',
+  discardPostConfirm: 'Discard this post?',
+  discardPostHint:
+    'The post will leave your inbox and all its drafts will be deleted. It will not be published. This cannot be undone.',
+  'Post cannot be discarded now; reload it':
+    'This post has changed or an operation is in progress. Reload it before discarding.',
   unsaved: 'Unsaved changes',
   discard: 'Discard unsaved changes?',
   saveFirst: 'Save your changes before publishing.',
@@ -155,6 +194,39 @@ const uk: typeof en = {
   history: 'Опубліковані',
   metrics: 'Активність AI',
   account: 'Акаунт',
+  guide: 'Інструкція',
+  guideTitle: 'Як це працює',
+  guideIntro:
+    'Збирайте дописи в одному Telegram-каналі, готуйте їх тут і публікуйте перевірений результат в іншому каналі.',
+  guideFlowTitle: 'Від джерела до публікації',
+  guideOtherChannels: 'Інші канали',
+  guideCollectionChannel: 'Ваш канал збору',
+  guideManual:
+    'Ви пересилаєте дописи в канал збору. AI-обробка й публікація запускаються лише за вашою дією на сайті.',
+  guideStepsTitle: 'Налаштуйте один раз, далі працюйте у Вхідних',
+  guideChannelsTitle: 'Підготуйте два різні Telegram-канали',
+  guideChannelsBody:
+    'Один канал потрібен для збору дописів — ваш канал «скрапер», інший — для публікації. Ви маєте бути адміністратором обох каналів. Вони можуть бути публічними або приватними. У канал збору потрапляють оригінали, а в канал публікації — лише результати, які ви підтвердили.',
+  guideBotTitle: 'Прив’яжіть Telegram і додайте бота адміністратором',
+  guideBotBody:
+    'На сторінці «Канали» прив’яжіть свій Telegram-акаунт і відкрийте бота платформи кнопкою «Відкрити бота». У Telegram відкрийте налаштування кожного каналу → «Адміністратори» й додайте цього бота в обидва канали. У каналі публікації також дозвольте боту надсилати дописи. Потім додайте обидва канали на сайті за @username або числовим ID; на сторінці є пояснення, як знайти ID приватного каналу.',
+  guideRouteTitle: 'Створіть активний маршрут',
+  guideRouteBody:
+    'На сторінці «Маршрути» виберіть канал збору як джерело, а канал публікації — як призначення. Задайте стандартні AI-налаштування й залиште маршрут активним. Маршрут визначає, звідки отримувати дописи та куди публікувати підтверджені чернетки.',
+  guideForwardTitle: 'Перешліть допис у канал збору',
+  guideForwardBody:
+    'У Telegram виберіть допис з іншого каналу й перешліть його у свій канал збору, а не в особистий чат із ботом. Можна також написати там новий допис. Підтримуються текст, фото, відео й альбоми. Бот отримає новий допис каналу, і він з’явиться у Вхідних (Inbox) без AI-запиту чи публікації.',
+  guideRewriteTitle: 'Створіть і відредагуйте AI-чернетку',
+  guideRewriteBody:
+    'Відкрийте допис у Вхідних, виберіть точний переклад або редагування та мову результату: українську чи англійську. Створіть AI-чернетку, дочекайтеся обробки й перевірте результат. За потреби змініть текст і форматування, перегляньте прев’ю Telegram та збережіть зміни. Обов’язково перевірте факти й посилання самостійно.',
+  guidePublishTitle: 'Опублікуйте або відхиліть допис',
+  guidePublishBody:
+    'Коли збережена чернетка готова, натисніть «Опублікувати в каналі» та підтвердьте дію. Бот надішле цю версію з медіа в канал призначення, а допис з’явиться в «Опублікованих». Якщо публікувати його не потрібно, виберіть «Відхилити допис»: після підтвердження він зникне з Вхідних, а його чернетки будуть видалені.',
+  guideTroubleshootingTitle: 'Допис не з’явився у Вхідних?',
+  guideTroubleshootingBody:
+    'Перевірте, що прив’язали Telegram-акаунт адміністратора обох каналів, додали бота адміністратором в обидва канали та створили активний маршрут із каналом збору як джерелом. Перешліть у цей канал новий тестовий допис і відкрийте Вхідні.',
+  guideNewPostsOnly:
+    'Збираються лише нові дописи, отримані після налаштування. Застосунок не імпортує історію й не читає інші канали автоматично: ви самі обираєте, які дописи переслати.',
   logout: 'Вийти',
   login: 'Увійти',
   register: 'Створити акаунт',
@@ -235,6 +307,12 @@ const uk: typeof en = {
   save: 'Зберегти зміни',
   publish: 'Опублікувати в каналі',
   publishConfirm: 'Опублікувати цю збережену чернетку в каналі призначення?',
+  discardPost: 'Відхилити допис',
+  discardPostConfirm: 'Відхилити цей допис?',
+  discardPostHint:
+    'Допис зникне з вхідних, а всі його чернетки будуть видалені. Він не буде опублікований. Цю дію неможливо скасувати.',
+  'Post cannot be discarded now; reload it':
+    'Допис змінився або операція ще виконується. Оновіть його перед відхиленням.',
   unsaved: 'Незбережені зміни',
   discard: 'Відкинути незбережені зміни?',
   saveFirst: 'Перед публікацією збережіть зміни.',

@@ -218,6 +218,7 @@ export function MediaPreview({ postId, media }: { postId: string; media: Media }
       }}
       className="post-media"
       controls
+      playsInline
       preload="metadata"
     />
   );
@@ -234,6 +235,7 @@ export function ConfirmDialog({
 
   useEffect(() => {
     dialog.current?.showModal();
+    dialog.current?.querySelector<HTMLElement>('[data-autofocus]')?.focus();
   }, []);
 
   return (

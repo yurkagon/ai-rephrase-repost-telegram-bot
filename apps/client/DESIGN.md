@@ -219,11 +219,13 @@ Native inputs and selects have a 42px minimum height, white background, single-p
 
 ### Navigation
 
-Desktop icons and small labels stack in the rail. Selected navigation uses a light blue rounded surface and Deep Blue text; hover uses a separate cool tint. Current pages expose `aria-current`. Mobile navigation remains labeled, with six evenly distributed destinations. The desktop rail includes UI language and logout; both remain available on the account screen when the rail footer is hidden on mobile.
+Desktop icons and small labels stack in the rail. Selected navigation uses a light blue rounded surface and Deep Blue text; hover uses a separate cool tint. Current pages expose `aria-current`. Mobile navigation remains labeled, with seven evenly distributed destinations, including Guide. The desktop rail includes UI language and logout; both remain available on the account screen when the rail footer is hidden on mobile.
 
 ### Review and publication workspace
 
-Inbox rows combine circular channel initials, channel name, timestamp, excerpt, and status. The detail pane distinguishes original, editable draft, and target-channel preview. Photo/video media and album captions appear in both original and preview; unavailable media has a text fallback. Media fits within the message at a 360px maximum height without cropping.
+Inbox rows combine circular channel initials, channel name, timestamp, excerpt, and status. The detail pane distinguishes original, editable draft, and target-channel preview. Photo/video media and album captions appear in both original and preview; unavailable media has a text fallback. Single media keeps its natural proportions and a 360px maximum height. Albums use the same compact two-column grid in both regions, including mobile, with an 8px gap and 16:10 tiles. Media is contained without cropping; video retains native controls and inline playback.
+
+Confirmation dialogs are centered in the viewport with automatic margins and a 32px total width/height gutter. Their maximum width remains 450px; long content scrolls inside the dialog.
 
 The editor offers SVG formatting controls with accessible labels, an inset focus stroke, and pressed states for supported toggles. Versions disclose on demand. Rating uses five explicit numeric choices. Save and publish actions occupy the footer; publish is enabled only for a saved draft with no unsaved edits, then opens a named native modal showing the target channel. Navigation guards unsaved changes. Uncertain publication requests a channel check and explicit resolution.
 
