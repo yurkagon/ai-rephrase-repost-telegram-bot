@@ -1,34 +1,68 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
-
+import { ConfigService } from '@nestjs/config';
+import ms, { type StringValue } from 'ms';
+import type { Request, Response } from 'express';
 import { Authorization } from '@/common/decorators/authorization.decorator';
-
+import type { Environment } from '@/config/env.schema';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { RefreshDto } from './dto/refresh.dto';
-
+import { RegisterDto } from './account.dto';
+import { PublicAuthGuard } from './public-auth.guard';
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
-
-  @ApiOperation({ summary: 'Login' })
+  constructor(
+    private readonly auth: AuthService,
+    private readonly config: ConfigService<Environment>,
+  ) {}
+  @Post('register')
+  @UseGuards(PublicAuthGuard)
+  @ApiOperation({ summary: 'Register a USER; sign in immediately without email verification' })
+  register(@Body() dto: RegisterDto) {
+    return this.auth.register(dto);
+  }
   @Post('login')
-  public async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  @UseGuards(PublicAuthGuard)
+  @ApiOperation({ summary: 'Login; refresh session is stored in an HttpOnly cookie' })
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) response: Response) {
+    return this.tokens(response, await this.auth.login(dto));
   }
-
-  @ApiOperation({ summary: 'Exchange a refresh token for a new token pair' })
   @Post('refresh')
-  public async refresh(@Body() refreshDto: RefreshDto) {
-    return this.authService.refresh(refreshDto.refreshToken);
+  @UseGuards(PublicAuthGuard)
+  async refresh(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
+    return this.tokens(response, await this.auth.refresh(this.cookie(request)));
   }
-
-  @Authorization()
-  @ApiOperation({ summary: 'Get the authenticated user' })
+  @Post('logout')
+  @UseGuards(PublicAuthGuard)
+  async logout(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
+    await this.auth.logout(this.cookie(request));
+    response.clearCookie('refresh', { path: '/api/auth', sameSite: 'lax', secure: this.secure });
+    return { message: 'Signed out' };
+  }
   @Get('me')
-  public me(@Req() req: Request) {
-    return req.user;
+  @Authorization()
+  me(@Req() request: Request) {
+    return request.user;
+  }
+  private get secure() {
+    return this.config.get('NODE_ENV', { infer: true }) === 'production';
+  }
+  private cookie(request: Request): string {
+    const cookies: Record<string, unknown> = request.cookies ?? {};
+    return typeof cookies.refresh === 'string' ? cookies.refresh : '';
+  }
+  private tokens(
+    response: Response,
+    result: { accessToken: string; refreshToken: string; user: unknown },
+  ) {
+    response.cookie('refresh', result.refreshToken, {
+      httpOnly: true,
+      secure: this.secure,
+      sameSite: 'lax',
+      path: '/api/auth',
+      maxAge: ms(this.config.getOrThrow<StringValue>('JWT_REFRESH_EXPIRATION_TIME')),
+    });
+    return { accessToken: result.accessToken, user: result.user };
   }
 }

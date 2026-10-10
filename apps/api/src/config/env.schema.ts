@@ -49,11 +49,9 @@ export const environmentSchema = z.object({
     .trim()
     .optional()
     .transform((value) => value || 'gpt-6-luna'),
-  TARGET_CHANNEL: z
-    .string()
-    .trim()
-    .optional()
-    .transform((value) => value || '@test_yuragon'),
+  APP_URL: z.url({ protocol: /^https?$/ }).default('http://localhost:3001'),
+  AI_USER_DAILY_LIMIT: z.coerce.number().int().positive().default(20),
+  AI_PLATFORM_DAILY_LIMIT: z.coerce.number().int().positive().default(200),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

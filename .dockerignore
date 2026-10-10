@@ -1,0 +1,14 @@
+.git
+.agents
+.codex
+.impeccable
+node_modules
+**/node_modules
+**/dist
+**/generated
+.env
+.env.*
+!.env.sample
+**/coverage
+**/test-results
+**/playwright-report

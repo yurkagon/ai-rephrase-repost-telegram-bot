@@ -69,41 +69,6 @@ const toHttpException = (
   }
 };
 
-const MAX_DETAIL_LENGTH = 200;
-
-const truncate = (text: string) =>
-  text.length > MAX_DETAIL_LENGTH ? `${text.slice(0, MAX_DETAIL_LENGTH)}…` : text;
-
-const describe = (exception: unknown): string => {
-  if (exception instanceof Prisma.PrismaClientKnownRequestError) {
-    const meta: Record<string, unknown> = exception.meta ?? {};
-    const model = typeof meta.modelName === 'string' ? ` on ${meta.modelName}` : '';
-    const fields = extractFields(meta);
-    const cause = (meta.driverAdapterError as { cause?: { originalMessage?: string } })?.cause;
-
-    const lines = exception.message.split('\n').filter((line) => line.trim().length > 0);
-    const detail = cause?.originalMessage ?? lines.at(-1) ?? exception.code;
-
-    return `Prisma ${exception.code}${model}${fields ? ` (${fields})` : ''}: ${truncate(detail)}`;
-  }
-
-  if (exception instanceof HttpException) {
-    const response = exception.getResponse();
-    const message =
-      typeof response === 'string'
-        ? response
-        : ((response as { message?: string | string[] }).message ?? exception.message);
-
-    return `${exception.name}: ${Array.isArray(message) ? message.join('; ') : message}`;
-  }
-
-  if (exception instanceof Error) {
-    return `${exception.name}: ${exception.message}`;
-  }
-
-  return `UnknownException: ${String(exception)}`;
-};
-
 @Catch()
 export class ExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(ExceptionsFilter.name);
@@ -153,10 +118,10 @@ export class ExceptionsFilter implements ExceptionFilter {
   }
 
   private log(status: number, route: string, exception: unknown): void {
-    const line = `${route} ${status} — ${describe(exception)}`;
+    const line = `${route} ${status} — ${exception instanceof Prisma.PrismaClientKnownRequestError ? exception.code : exception instanceof Error ? exception.name : 'UnknownError'}`;
 
     if (status >= 500) {
-      this.logger.error(line, exception instanceof Error ? exception.stack : undefined);
+      this.logger.error(line);
       return;
     }
 

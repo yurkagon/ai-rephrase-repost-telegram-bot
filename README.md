@@ -1,90 +1,160 @@
 # CopywriteRepostBot
 
-Telegram repost bot monorepo with NestJS, Prisma, PostgreSQL, Redis, React, Vite, and Tailwind CSS. The API includes JWT authentication, role-based access, and user management. The client is intentionally a single Hello world page. The Telegram repost bot runs in the API process and translates posts to Ukrainian through LangChain; it is independent of application accounts and storage.
+A full-stack Telegram editorial workspace: collect channel posts, prepare structured AI drafts, review the result, and publish the exact version you approved.
 
-## Requirements
+Built with NestJS, React, PostgreSQL, Prisma, Redis, BullMQ, LangChain and OpenAI. The interface supports Ukrainian and English and follows Telegram Desktop's familiar layout. AI output language is selected independently.
 
-- Node.js 24 and pnpm 11
-- Docker with Compose
+## What works
 
-## Start locally
+- Registration without email confirmation, hashed passwords, profile password changes and revocable, rotating refresh sessions.
+- One shared platform bot; Telegram account linking with an expiring, single-use deep link.
+- Administrator-verified channels and dynamic source → destination routes, with cycle prevention.
+- Persistent inbox for text, photos, videos and albums; deduplication by route and Telegram message/group IDs.
+- On-demand exact translation or editorial rewriting with language, tone, length and source-signature settings.
+- Telegram-compatible rich text editor, source/preview, version history and AI feedback.
+- Explicit confirmation before publishing; no automatic publication or fallback to the original after AI failure.
+- Durable operation records and a Redis-backed queue, daily quotas, token/latency/error metrics and a repository-owned eval suite.
 
-1. Copy `.env.sample` to `.env`. Set `JWT_SECRET` and the `SEED_USER_*` values before sharing the environment with anyone. Also set `TELEGRAM_BOT_API_TOKEN` and `OPENAI_API_KEY`: the bot always runs with the API, so both are required.
-2. Run `pnpm install`.
-3. Run `pnpm setup`. It starts PostgreSQL and Redis, applies the initial migration, generates Prisma Client, and creates one SUPERADMIN user. Repeating it does not create another user.
-4. Run `pnpm dev`. The API is at `http://localhost:3000`, its docs at `http://localhost:3000/docs`, and the client at `http://localhost:3001`.
+```mermaid
+flowchart LR
+  TG[Telegram channel] --> Ingest[Persist incoming post]
+  Ingest --> Inbox[Inbox]
+  Inbox -->|Generate| Op[PostgreSQL operation record]
+  Op --> Queue[BullMQ / Redis]
+  Queue --> AI[LangChain structured output]
+  AI --> Draft[Versioned draft]
+  Draft --> Review[Review / edit / preview]
+  Review -->|Confirm saved version| Send[Publication operation]
+  Send --> Destination[Destination channel]
+```
 
-## Commands
+## Local development
 
-| Command                                              | Purpose                                                            |
-| ---------------------------------------------------- | ------------------------------------------------------------------ |
-| `pnpm setup`                                         | Start local services, migrate, generate, and seed                  |
-| `pnpm dev`                                           | Run API and client with watch mode                                 |
-| `pnpm dev:api` / `pnpm dev:client`                   | Run one app                                                        |
-| `pnpm build` / `pnpm start:prod`                     | Build and run the API with the built client                        |
-| `pnpm lint` / `pnpm typecheck` / `pnpm test`         | Verify the workspace                                               |
-| `pnpm db:up` / `pnpm db:down`                        | Start or stop local PostgreSQL and Redis; `db:down` keeps data     |
-| `pnpm db:migrate` / `pnpm db:deploy`                 | Apply migrations in development or deployment                      |
-| `pnpm db:generate` / `pnpm db:seed` / `pnpm db:view` | Generate Prisma Client, seed the first user, or open Prisma Studio |
+Use Node 24+, pnpm (the version is pinned in `package.json`) and Docker.
 
-Docker Compose uses the `copywrite-repost-bot` project name. Existing containers and volumes from a previous project name are not migrated; the renamed project uses a separate PostgreSQL volume.
+```sh
+cp .env.sample .env
+pnpm install
+pnpm db:up
+pnpm db:deploy
+pnpm db:generate
+pnpm dev
+```
 
-`pnpm install` activates the Git hooks through Husky. Before each commit, `lint-staged` runs Prettier and ESLint on staged app code. Before each push, `pnpm test` runs the API tests.
+Set `TELEGRAM_BOT_API_TOKEN`, `OPENAI_API_KEY` and a random `JWT_SECRET` in `.env`. Keep local credentials private. `APP_URL` must match the browser's origin; use the actual client port if you change it. Ports and database connections are documented in `.env.sample`.
 
-The initial migration contains only the `User` table and `Role` enum. It is for a **new, empty database**. Do not apply it to a database from an earlier application; no data migration is provided.
+The API starts the bot's polling and queue workers together. A fatal Telegram startup/polling failure stops the shared process; individual generation/publication failures are saved and shown in the workspace. Production runs **one API instance** per bot token.
 
-## Production
+Open the client at `http://localhost:3001`. API documentation: `http://localhost:3000/docs`; OpenAPI JSON: `/openapi.json`; readiness: `/api/health`.
 
-Run `pnpm build` and then `pnpm start:prod`. The React app is built into static files in `apps/client/dist`, and the NestJS API serves those files and the API from the same server and origin. A separate web server for the React app is not required; Vite is used only during development.
+`pnpm db:seed` optionally creates the configured SUPERADMIN. It is separate from normal registration; every publicly registered account is `USER`. Existing administrator roles are preserved by migrations. Existing accounts can sign in immediately; no email confirmation or email-based password recovery is required.
 
-Include the client build in the deployment alongside the API build. By default, the API looks for it at `apps/client/dist` relative to the monorepo layout. Set `CLIENT_DIST_PATH` to its absolute path if the deployment layout differs. Set `DATABASE_URL`, `REDIS_URL`, JWT values, `TELEGRAM_BOT_API_TOKEN`, and `OPENAI_API_KEY` in the runtime environment.
+### Connect your channels
 
-## Configuration
+1. Register and sign in immediately.
+2. Open **Channels → Connect Telegram**, follow the bot link, and refresh the connection.
+3. Add the bot as an administrator to your source and destination channels. Grant permission to post in the destination.
+4. Add each channel by `@username`, or its numeric `-100…` ID for a private channel. The linked Telegram user must administrate both channels.
+5. Create a route, choose the AI defaults, and publish a **new** test post in the source channel.
+6. Select it from Inbox, generate a draft, edit/save if needed, then confirm publication.
 
-`ConfigModule` in `apps/api/src/config` registers the global NestJS `ConfigModule`. A single Zod schema validates and normalizes the runtime environment at startup; services use `ConfigService` with the inferred `Environment` type. Invalid configuration stops startup and reports field names without exposing values.
+The bot receives new posts only from channels where it has been added. This MVP does not scrape other channels or import existing history. A Telegram account/channel can belong to one platform account; teams are outside this release.
 
-Required values are `DATABASE_URL` (PostgreSQL), `REDIS_URL` (Redis), `JWT_SECRET`, `JWT_EXPIRATION_TIME` and `JWT_REFRESH_EXPIRATION_TIME` durations of at least one second such as `2h`/`7d`, the Telegram token, and `OPENAI_API_KEY`. Ports must be integers from 1 to 65535; defaults are `PORT=3000` and `CLIENT_PORT=3001`. `NODE_ENV` supports `development`, `test`, and `production`, with `development` as the default. Optional `CORS_ORIGIN` accepts comma-separated HTTP/HTTPS URLs and otherwise allows the local API and client ports. `CLIENT_DIST_PATH` defaults to the client build directory.
+## Code structure
 
-The project uses one `.env` file at the repository root. The API loads it through `ConfigModule`; `prisma.config.ts` loads it through Node.js `loadEnvFile` and passes its values to the seed process. Vite and Docker Compose use the same root file. Shell variables take priority. Prisma commands do not require bot credentials. Local secrets are not copied from `_original`.
+```text
+apps/api/src/
+  api/auth, api/user  accounts, sessions and profiles
+  channels/          Telegram linking, verified channels and route settings
+  posts/             ingestion, drafts, operations, quotas, queue worker and media proxy
+  ai/                one AiService, provider settings, versioned prompts and rewrite options
+  evals/             40-case dataset, deterministic checks and budgeted live runner
+  telegram/          Telegraf construction, handlers transport and cancellable polling
+  config/            Zod-validated server environment
+  infra/             Prisma and Redis
+apps/client/src/     bilingual React workspace, editor, account and channel flows
+```
 
-## Telegram and AI
+Feature modules depend on Telegram transport and AI, without reverse imports or service locators. Prisma is used directly; no extra repository layer. Original Telegram content, AI revisions and manual revisions are separate records. Telegram file IDs are reused; previews are fetched through an owner-authorized bounded proxy and never expose the bot token.
 
-The bot is implemented in two NestJS modules:
+## AI contract and evaluation
 
-- `apps/api/src/ai`: the LangChain model helper, fixed system/developer prompts, and `AiService.rewrite(text)` returning validated HTML. `AiService` creates its model once in the constructor, with strict structured output `{ html: string }` already attached to the `model` field.
-- `apps/api/src/telegram`: Telegram handlers and publishing for text, photos, videos, and photo/video albums.
+`AiService.rewrite(text, options)` returns validated `{ html, model, promptVersion, durationMs, inputTokens?, outputTokens?, outcome }`. The model's schema remains strictly `{ html: string }` with `jsonSchema`, `strict` and `includeRaw`. System/developer instructions are separate from the untrusted post. Default model: `gpt-6-luna`, overridden with `LLM_MODEL`; Responses API, low reasoning, 30-second timeout, and up to two transport retries.
 
-`AppModule` registers `TelegramModule.registerAsync()` with a factory that receives `ConfigService` and returns a `TelegramModuleOptions` object (`{ token: string }`). `TelegramService` receives these options through DI, creates Telegraf itself, and manages its handlers, polling, and shutdown.
+Exact translation preserves wording when the input already matches the target language. Editorial mode allows changing wording/tone/length while preserving facts. Meaningful links are retained; only a trailing source signature is removed when enabled, with the YouTube exception. Runtime HTML and Telegram length checks still apply: structured output alone does not ensure safe markup or correct meaning. See [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
 
-`TelegramModule` imports `AiModule`; neither depends on auth, users, Prisma, or Redis. The existing API still uses PostgreSQL and Redis as before. No Telegram-to-account associations or database migrations are introduced. `_original` remains the reference copy and is not loaded at runtime.
+The default UTC daily limits are 20 logical AI calls per account and 200 globally, configured with `AI_USER_DAILY_LIMIT` / `AI_PLATFORM_DAILY_LIMIT`. An album reserves all non-empty caption calls atomically. Reservations remain consumed after failure because a provider request may already have happened; transport retries can increase actual provider usage. These are usage limits, not billing or exact dollar caps.
 
-Bot settings use the same validated `ConfigService`:
+```sh
+# Offline: check the dataset and deterministic validators, no model requests
+pnpm evals
 
-| Variable                 | Purpose                                                        |
-| ------------------------ | -------------------------------------------------------------- |
-| `TELEGRAM_BOT_API_TOKEN` | Required bot token                                             |
-| `OPENAI_API_KEY`         | Required AI key                                                |
-| `LLM_MODEL`              | Model name, default `gpt-6-luna`                               |
-| `TARGET_CHANNEL`         | Destination `@username` or numeric ID, default `@test_yuragon` |
+# Live: explicit logical-call budget, reports go to apps/api/eval-reports/
+pnpm --filter api evals --live --budget-calls 40 --out eval-reports/candidate.json
 
-Add these variables to the new application's local `.env`; the values in `_original/.env` are not loaded or copied automatically. The bot needs access to source channels and permission to publish to the destination. Run one API process per bot token: multiple polling processes for the same token conflict.
+# Optional structured LLM grading; budget includes generation + grading
+pnpm --filter api evals --live --judge --budget-calls 80 --out eval-reports/judged.json
 
-The bot preserves Ukrainian wording, translates other languages, preserves HTML and meaningful links, and removes only the trailing source signature except YouTube links. `/start` replies with `Welcome` without accessing an application account. Posts from the destination channel are ignored.
+# Compare models or prompt revisions on the same versioned dataset
+pnpm --filter api evals --live --budget-calls 40 --model YOUR_MODEL \
+  --out eval-reports/alternative.json --compare eval-reports/candidate.json
+```
 
-Each rewrite sends the fixed system prompt, developer prompt, and the post as a user message. LangChain maps the system role to developer for `gpt-6-luna`, so the request roles are developer, developer, user. OpenAI uses the Responses API with low reasoning effort, a 30-second timeout per request, and at most two retries for transient transport failures. Refusals, incomplete responses, invalid structured output, and empty results prevent publication, without falling back to the original text. Every album caption is prepared before sending the album; a failure in any caption skips the entire album. Media without a caption makes no AI request.
+Keep baseline reports before editing a prompt and bump `promptVersion` when its rules change. Reports contain each case's failures, available token usage, latency, model and prompt version. Deterministic checks cover required facts/links, source removal, unchanged wording, safe HTML and message lengths; they do not prove translation quality. Live LLM grades are advisory and must be calibrated with human review, following [OpenAI evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices). An [example offline report](apps/api/src/evals/examples/reference-check.md) and its JSON are included in the repository. Never present `reference_self_check` results as measured model quality. CI performs no paid API calls.
 
-NestJS starts polling in the background so it does not block the HTTP server. A fatal polling error shuts down the shared process; individual post errors are logged and processing continues. Shutdown hooks stop polling and cancel pending album timers. Logs contain operation metadata and error types, not post content, AI responses, or credentials.
+## Verification
 
-Albums use a one-second debounce. Active albums deduplicate media by message ID, restore message order, and accept 2–10 unique items before requesting AI. Their media and timers are released after processing; a bounded cache remembers the last 10,000 processed album IDs, including skipped albums, to ignore late repeats. Shutdown clears both stores. Pending albums and deduplication state are lost on restart; an album whose ID has been evicted may be published again. The debounce is a collection heuristic and does not guarantee that every item has arrived. Structured output validates the shape of the AI response, not translation quality or Telegram HTML correctness. Persistent delivery, queues, webhooks, and evals remain separate follow-up work.
+```sh
+pnpm test
+pnpm typecheck          # includes API tests
+pnpm lint
+pnpm build
+```
 
-The API's Jest suite covers DI, AI requests and failures, media publishing, album behavior, and bot lifecycle with local mocks; it does not contact Telegram or OpenAI. Run `pnpm --filter api test --runInBand`, `pnpm --filter api typecheck`, `pnpm lint:api`, and `pnpm --filter api build` to check the port.
+Integration and browser tests require **isolated, migrated** PostgreSQL and Redis. External Telegram and OpenAI are replaced with local stubs. Browser tests require a dedicated database whose name ends in `_test`; their test-only server resets its data between scenarios. Never point these variables at production.
 
-## API
+```sh
+DATABASE_URL=postgresql://postgres:test@localhost:55439/copywrite_browser_test pnpm db:deploy
+TEST_DATABASE_URL=postgresql://postgres:test@localhost:55439/copywrite_browser_test \
+TEST_REDIS_URL=redis://localhost:56390/1 pnpm test:integration
 
-All API endpoints are under `/api`. Use `POST /api/auth/login` with the seeded email and password to obtain access and refresh tokens. Send the access token as `Authorization: Bearer <token>`. `POST /api/auth/refresh` renews the token pair and `GET /api/auth/me` returns the current user.
+pnpm --filter client exec playwright install chromium
+TEST_DATABASE_URL=postgresql://postgres:test@localhost:55439/copywrite_browser_test \
+TEST_REDIS_URL=redis://localhost:56390/1 pnpm test:e2e
+```
 
-`/api/user` contains the user management endpoints. Creating, listing, reading, changing roles, and deleting users require `SUPERADMIN`. Any authenticated user can update their own profile and password. The browser page intentionally has no authentication UI; use the API docs or an API client.
+Coverage includes ownership boundaries, public role injection, session rotation, bot permissions, routes, replayed updates, album order/deduplication, recovery after Redis failure and restart, shutdown during generation, password-change session revocation, AI failure blocking, optimistic draft revisions, quotas, ambiguous Telegram delivery and the registration → reviewed publication flow on desktop/mobile.
 
-## License
+## Production deployment
 
-The project code is licensed under the [MIT License](LICENSE). Bundled third-party skills in `.agents/skills` retain their own licenses.
+Configure HTTPS `APP_URL`, strong JWT/database credentials and working bot/OpenAI keys. `.env` is excluded from the image. Place the app behind an HTTPS reverse proxy; the API serves the built client on the same origin. Production trusts one reverse-proxy hop for client IP rate limits. The proxy must replace `X-Forwarded-For` with the actual client IP; keep the app’s loopback port private and do not expose PostgreSQL or Redis ports. The initial deployment is single-instance polling; no webhook or separate worker is needed.
+
+```sh
+docker compose -f compose.production.yaml build
+docker compose -f compose.production.yaml up -d postgres redis
+docker compose -f compose.production.yaml run --rm app pnpm db:deploy
+docker compose -f compose.production.yaml up -d app
+```
+
+Set `LOCAL_POSTGRES_PASSWORD` and `JWT_SECRET` to strong random values. URL-encode reserved characters in database URL credentials.
+
+Redis uses AOF and a persistent volume; PostgreSQL holds source content, drafts, operation intents and publication results. The queue dispatcher re-enqueues pending intents after recovery. A generation interrupted after starting requires a manual retry. A publication interrupted during sending becomes **delivery unknown**; verify the destination before marking it published or explicitly allowing another send.
+
+### Backup and restore
+
+```sh
+docker compose -f compose.production.yaml exec -T postgres \
+  sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > backup.sql
+
+# Stop the app, restore into a new empty database, then migrate and restart.
+docker compose -f compose.production.yaml stop app
+# On the replacement PostgreSQL database:
+psql "$RESTORE_DATABASE_URL" < backup.sql
+# Configure DATABASE_URL to the restored database before restarting.
+```
+
+Protect backups like channel content and account data. Restore PostgreSQL first; pending operation intents can recreate queue jobs. Run `pnpm db:deploy` before starting the restored app. Already-running publications are intentionally not sent automatically again.
+
+## Limits
+
+No scraping/MTProto, channel history import, automatic/scheduled posting, teams, payments, RAG, agents or demo mode. The album's 1000 ms quiet period is a completeness heuristic; Telegram updates are retained by Telegram for a limited time. Telegram sending has no general exactly-once guarantee. Media preview is capped at 20 MiB and may be unavailable even when Telegram can republish the saved file. Live provider access, real translation quality and actual public deployment require separate smoke tests; offline test success is not evidence of those.

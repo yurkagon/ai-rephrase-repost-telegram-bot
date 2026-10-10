@@ -44,3 +44,10 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # Generated files
 dist/
 apps/api/generated/
+
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+apps/api/eval-reports/
+.impeccable/review/

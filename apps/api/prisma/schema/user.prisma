@@ -1,6 +1,7 @@
 enum Role {
   SUPERADMIN
   ADMIN
+  USER
 
   @@map("roles")
 }
@@ -13,7 +14,14 @@ model User {
 
   firstName String @map("first_name")
   lastName  String @map("last_name")
-  role      Role   @default(SUPERADMIN)
+  role      Role   @default(USER)
+
+  telegramId String? @unique
+  sessions RefreshSession[]
+  tokens AccountToken[]
+  channels Channel[]
+  routes Route[]
+  quota DailyQuota[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

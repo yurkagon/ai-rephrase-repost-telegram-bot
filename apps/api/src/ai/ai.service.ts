@@ -12,7 +12,14 @@ import {
 } from '@langchain/core/messages';
 import type { Runnable } from '@langchain/core/runnables';
 import { z } from 'zod';
-import { systemPrompt, developerPrompt } from './prompt';
+import { systemPrompt, buildDeveloperPrompt, promptVersion } from './prompt';
+import {
+  defaultRewriteOptions,
+  rewriteOptionsSchema,
+  RewriteError,
+  type RewriteOptions,
+  type RewriteResult,
+} from './rewrite-options';
 
 @Injectable()
 export class AiService {
@@ -41,8 +48,14 @@ export class AiService {
     });
   }
 
-  public async rewrite(text: string): Promise<string> {
-    if (text.trim().length < 2) return '';
+  public async rewrite(
+    text: string,
+    settings: RewriteOptions = defaultRewriteOptions,
+  ): Promise<RewriteResult> {
+    const options = rewriteOptionsSchema.parse(settings);
+    if (text.trim().length < 2)
+      return { html: '', model: this.modelName, promptVersion, durationMs: 0, outcome: 'skipped' };
+    if (text.length > 16_000) throw new Error('Post exceeds AI input limit.');
 
     const startedAt = Date.now();
     let raw: BaseMessage | undefined;
@@ -50,7 +63,7 @@ export class AiService {
     try {
       const response = await this.model.invoke([
         new SystemMessage(systemPrompt),
-        new ChatMessage({ role: 'developer', content: developerPrompt }),
+        new ChatMessage({ role: 'developer', content: buildDeveloperPrompt(options) }),
         new HumanMessage(text),
       ]);
       raw = response.raw;
@@ -85,10 +98,27 @@ export class AiService {
       }
 
       outcome = 'success';
-      return result.data.html;
+      const usage = AIMessage.isInstance(raw) ? raw.usage_metadata : undefined;
+      return {
+        html: result.data.html,
+        model: this.modelName,
+        promptVersion,
+        durationMs: Date.now() - startedAt,
+        inputTokens: usage?.input_tokens,
+        outputTokens: usage?.output_tokens,
+        outcome,
+      };
     } catch (error) {
       if (error instanceof SyntaxError || error instanceof z.ZodError) outcome = 'invalid_output';
-      throw error;
+      const usage = AIMessage.isInstance(raw) ? raw.usage_metadata : undefined;
+      throw new RewriteError({
+        model: this.modelName,
+        promptVersion,
+        outcome,
+        durationMs: Date.now() - startedAt,
+        inputTokens: usage?.input_tokens,
+        outputTokens: usage?.output_tokens,
+      });
     } finally {
       this.logger.log({
         event: 'AI rewrite',
@@ -102,6 +132,10 @@ export class AiService {
 }
 
 const rewriteSchema = z.strictObject({
-  html: z.string().describe('The final Ukrainian Telegram post with its original HTML formatting.'),
+  html: z
+    .string()
+    .describe(
+      'The final Telegram post in the requested target language, with Telegram-compatible HTML formatting.',
+    ),
 });
 type RewriteOutput = z.infer<typeof rewriteSchema>;

@@ -35,9 +35,8 @@ export class UserService {
       throw new BadRequestException('Паролі не збігаються');
     }
 
-    const existingUser = await this.prismaService.user.findUnique({
-      where: { email },
-    });
+    email = email.trim().toLowerCase();
+    const existingUser = await this.findByEmail(email);
     if (existingUser) {
       throw new ConflictException('User already exists');
     }
@@ -58,8 +57,8 @@ export class UserService {
   }
 
   public async findByEmail(email: string): Promise<UserWithPassword | null> {
-    return this.prismaService.user.findUnique({
-      where: { email },
+    return this.prismaService.user.findFirst({
+      where: { email: { equals: email.trim().toLowerCase(), mode: 'insensitive' } },
       select: {
         ...userSelect,
         password: true,
@@ -115,11 +114,11 @@ export class UserService {
       throw new BadRequestException('Поточний пароль неправильний');
     }
 
-    await this.prismaService.user.update({
-      where: { id },
-      data: { password: await hash(newPassword) },
-      select: { id: true },
-    });
+    const password = await hash(newPassword);
+    await this.prismaService.$transaction([
+      this.prismaService.user.update({ where: { id }, data: { password }, select: { id: true } }),
+      this.prismaService.refreshSession.deleteMany({ where: { userId: id } }),
+    ]);
 
     await this.redisService.del(`user:id:${id}`);
   }
@@ -183,6 +182,7 @@ export class UserService {
 }
 
 const userSelect = {
+  telegramId: true,
   id: true,
   email: true,
   firstName: true,
@@ -197,6 +197,7 @@ export type UserWithPassword = UserModel;
 
 export function toSafeUser(user: UserWithPassword): User {
   return {
+    telegramId: user.telegramId,
     id: user.id,
     email: user.email,
     firstName: user.firstName,

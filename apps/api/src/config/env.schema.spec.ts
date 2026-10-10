@@ -18,7 +18,6 @@ it('applies defaults, normalizes blank values and ignores unrelated environment 
       ...validEnv,
       PORT: ' ',
       LLM_MODEL: ' ',
-      TARGET_CHANNEL: '',
       PATH: '/bin',
     }),
   ).toEqual({
@@ -27,7 +26,9 @@ it('applies defaults, normalizes blank values and ignores unrelated environment 
     PORT: 3000,
     CLIENT_PORT: 3001,
     LLM_MODEL: 'gpt-6-luna',
-    TARGET_CHANNEL: '@test_yuragon',
+    APP_URL: 'http://localhost:3001',
+    AI_USER_DAILY_LIMIT: 20,
+    AI_PLATFORM_DAILY_LIMIT: 200,
   });
 });
 
@@ -38,14 +39,12 @@ it('parses configured ports and accepts deployment settings', () => {
     PORT: '3012',
     CLIENT_PORT: '4001',
     LLM_MODEL: 'custom-model',
-    TARGET_CHANNEL: '-100123',
     CLIENT_DIST_PATH: '/srv/client',
   });
   expect(config).toMatchObject({
     PORT: 3012,
     CLIENT_PORT: 4001,
     LLM_MODEL: 'custom-model',
-    TARGET_CHANNEL: '-100123',
     CLIENT_DIST_PATH: '/srv/client',
   });
   expect(
@@ -140,7 +139,7 @@ it('reports invalid fields without exposing their contents', () => {
 
 it('provides validated values globally through the application ConfigModule', async () => {
   const original = process.env;
-  process.env = { ...validEnv, PORT: '3012', LLM_MODEL: ' ', TARGET_CHANNEL: '' };
+  process.env = { ...validEnv, PORT: '3012', LLM_MODEL: ' ' };
   let module: TestingModule | undefined;
   try {
     // The module reads environment variables at registration, as Nest ConfigModule.forRoot does.

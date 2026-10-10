@@ -5,6 +5,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
 import { JWTAccessTokenPayload } from '@/api/auth/auth.interfaces';
+import { PrismaService } from '@/infra/prisma/prisma.service';
 import { UserService } from '@/api/user/user.service';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   public constructor(
     private readonly configService: ConfigService<Environment>,
     private readonly userService: UserService,
+    private readonly db: PrismaService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -25,6 +27,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Invalid token type');
     }
 
+    const session = await this.db.refreshSession.findUnique({
+      where: { id: payload.sessionId ?? '' },
+    });
+    if (!session || session.userId !== payload.userId || session.expiresAt <= new Date())
+      throw new UnauthorizedException('Session expired');
     const user = await this.userService.findByIdForAuth(payload.userId);
 
     return user;

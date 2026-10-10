@@ -1,6 +1,8 @@
+import helmet from 'helmet';
 import type { INestApplication } from '@nestjs/common';
 import type { Response } from 'express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { documentResponses } from './response-schemas';
 import { apiReference } from '@scalar/nestjs-api-reference';
 
 import {
@@ -31,6 +33,7 @@ export const useSwagger = (app: INestApplication) => {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
+  documentResponses(document);
 
   const httpAdapter = app.getHttpAdapter();
   httpAdapter.get(OPENAPI_JSON_PATH, (_req: unknown, res: Response) => {
@@ -39,6 +42,14 @@ export const useSwagger = (app: INestApplication) => {
 
   app.use(
     OPENAPI_DOCS_PATH,
+    helmet.contentSecurityPolicy({
+      directives: {
+        scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        fontSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'"],
+      },
+    }),
     apiReference({
       url: OPENAPI_JSON_PATH,
       title: OPENAPI_TITLE,

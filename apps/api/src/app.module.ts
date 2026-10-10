@@ -5,6 +5,8 @@ import type { Environment } from '@/config/env.schema';
 
 import { InfraModule } from '@/infra/infra.module';
 
+import { PostsModule } from './posts/posts.module';
+import { ChannelsModule } from './channels/channels.module';
 import { ApiModule } from './api/api.module';
 import { TelegramModule } from './telegram/telegram.module';
 
@@ -13,6 +15,8 @@ import { TelegramModule } from './telegram/telegram.module';
     ConfigModule,
     InfraModule,
     ApiModule,
+    ChannelsModule,
+    PostsModule,
     TelegramModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

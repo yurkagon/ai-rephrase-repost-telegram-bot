@@ -13,7 +13,10 @@ export class RedisService implements OnModuleDestroy {
     this.redisClient = new Redis(this.configService.getOrThrow('REDIS_URL', { infer: true }));
 
     this.redisClient.on('error', (error: unknown) => {
-      this.logger.error('Redis connection error', error);
+      this.logger.error({
+        event: 'Redis connection error',
+        error: error instanceof Error ? error.name : 'UnknownError',
+      });
     });
   }
 

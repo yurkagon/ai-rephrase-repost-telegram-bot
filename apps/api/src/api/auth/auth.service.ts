@@ -1,81 +1,80 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Environment } from '@/config/env.schema';
 import { JwtService } from '@nestjs/jwt';
 import { verify } from 'argon2';
-import type { StringValue } from 'ms';
-
+import { createHash, randomBytes } from 'node:crypto';
+import ms, { type StringValue } from 'ms';
+import type { Environment } from '@/config/env.schema';
 import { UserService, toSafeUser, type User } from '@/api/user/user.service';
-
+import { PrismaService, Role } from '@/infra/prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
-
-import { JWTAccessTokenPayload } from './auth.interfaces';
-
+import { RegisterDto } from './account.dto';
+export const tokenHash = (value: string) => createHash('sha256').update(value).digest('hex');
+export const newToken = () => randomBytes(32).toString('base64url');
 @Injectable()
 export class AuthService {
-  private readonly JWT_EXPIRATION_TIME: StringValue;
-  private readonly JWT_REFRESH_EXPIRATION_TIME: StringValue;
-
   constructor(
-    private readonly userService: UserService,
-    private readonly configService: ConfigService<Environment>,
-    private readonly jwtService: JwtService,
-  ) {
-    this.JWT_EXPIRATION_TIME = this.configService.getOrThrow<StringValue>('JWT_EXPIRATION_TIME');
-    this.JWT_REFRESH_EXPIRATION_TIME = this.configService.getOrThrow<StringValue>(
-      'JWT_REFRESH_EXPIRATION_TIME',
+    private readonly users: UserService,
+    private readonly config: ConfigService<Environment>,
+    private readonly jwt: JwtService,
+    private readonly db: PrismaService,
+  ) {}
+  async register(dto: RegisterDto) {
+    await this.users.create({
+      ...dto,
+      email: dto.email.trim().toLowerCase(),
+      role: Role.USER,
+    });
+    return { message: 'Account created' };
+  }
+  async login(dto: LoginDto) {
+    const user = await this.users.findByEmail(dto.email.trim().toLowerCase());
+    if (!user || !(await verify(user.password, dto.password)))
+      throw new UnauthorizedException('Invalid credentials');
+    return { user: toSafeUser(user), ...(await this.issue(user)) };
+  }
+  private async issue(user: User, sessionId?: string) {
+    const refreshToken = newToken();
+    const expiresAt = new Date(
+      Date.now() + ms(this.config.getOrThrow<StringValue>('JWT_REFRESH_EXPIRATION_TIME')),
     );
-  }
-
-  public async login(loginDto: LoginDto) {
-    const user = await this.userService.findByEmail(loginDto.email);
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const passwordValid = await verify(user.password, loginDto.password);
-    if (!passwordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const tokens = await this.generateTokens(user);
-
-    return { user: toSafeUser(user), ...tokens };
-  }
-
-  public async refresh(refreshToken: string) {
-    let payload: JWTAccessTokenPayload;
-    try {
-      payload = await this.jwtService.verifyAsync<JWTAccessTokenPayload>(refreshToken);
-    } catch {
-      throw new UnauthorizedException('Invalid or expired refresh token');
-    }
-
-    if (payload.tokenType !== 'refresh') {
-      throw new UnauthorizedException('Invalid token type');
-    }
-
-    const user = await this.userService.findByIdForAuth(payload.userId);
-
-    return this.generateTokens(user);
-  }
-
-  private async generateTokens(user: User) {
-    const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(
-        { userId: user.id, tokenType: 'access' } satisfies JWTAccessTokenPayload,
-        {
-          expiresIn: this.JWT_EXPIRATION_TIME,
-        },
-      ),
-      this.jwtService.signAsync(
-        { userId: user.id, tokenType: 'refresh' } satisfies JWTAccessTokenPayload,
-        {
-          expiresIn: this.JWT_REFRESH_EXPIRATION_TIME,
-        },
-      ),
-    ]);
-
+    const session = await this.db.refreshSession.create({
+      data: {
+        ...(sessionId ? { id: sessionId } : {}),
+        userId: user.id,
+        tokenHash: tokenHash(refreshToken),
+        expiresAt,
+      },
+    });
+    const accessToken = await this.jwt.signAsync(
+      { userId: user.id, tokenType: 'access', sessionId: session.id },
+      { expiresIn: this.config.getOrThrow<StringValue>('JWT_EXPIRATION_TIME') },
+    );
     return { accessToken, refreshToken };
+  }
+  async refresh(token: string) {
+    const refreshToken = newToken();
+    const session = await this.db.$transaction(async (tx) => {
+      const old = await tx.refreshSession.findUnique({
+        where: { tokenHash: tokenHash(token) },
+        include: { user: true },
+      });
+      if (!old || old.expiresAt <= new Date())
+        throw new UnauthorizedException('Invalid or expired session');
+      const rotated = await tx.refreshSession.updateMany({
+        where: { id: old.id, tokenHash: old.tokenHash },
+        data: { tokenHash: tokenHash(refreshToken) },
+      });
+      if (rotated.count !== 1) throw new UnauthorizedException('Session already rotated');
+      return old;
+    });
+    const accessToken = await this.jwt.signAsync(
+      { userId: session.userId, tokenType: 'access', sessionId: session.id },
+      { expiresIn: this.config.getOrThrow<StringValue>('JWT_EXPIRATION_TIME') },
+    );
+    return { user: toSafeUser(session.user), accessToken, refreshToken };
+  }
+  async logout(token: string) {
+    await this.db.refreshSession.deleteMany({ where: { tokenHash: tokenHash(token) } });
   }
 }

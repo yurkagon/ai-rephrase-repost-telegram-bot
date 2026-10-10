@@ -32,6 +32,7 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(8)
+  @MaxLength(128)
   password: string;
 
   @ApiProperty({
@@ -42,6 +43,7 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(8)
+  @MaxLength(128)
   confirmPassword: string;
 
   @ApiProperty({ enum: Role, example: Role.ADMIN })

@@ -3,6 +3,7 @@ packages:
   - 'packages/*'
 
 allowBuilds:
+  msgpackr-extract: false
   '@nestjs/core': true
   '@prisma/engines': true
   '@scarf/scarf': false

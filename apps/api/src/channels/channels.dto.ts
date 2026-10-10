@@ -1,0 +1,33 @@
+import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  ValidateNested,
+  IsIn,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+export class RewriteOptionsDto {
+  @ApiProperty({ enum: ['translate', 'edit'] }) @IsIn(['translate', 'edit']) mode:
+    'translate' | 'edit';
+  @ApiProperty({ enum: ['uk', 'en'] }) @IsIn(['uk', 'en']) language: 'uk' | 'en';
+  @IsIn(['neutral', 'formal', 'friendly']) tone: 'neutral' | 'formal' | 'friendly';
+  @IsIn(['preserve', 'concise']) length: 'preserve' | 'concise';
+  @IsBoolean() removeSource: boolean;
+}
+export class AddChannelDto {
+  @ApiProperty({ example: '@my_channel' }) @IsString() @MaxLength(100) identifier: string;
+}
+export class CreateRouteDto {
+  @IsUUID() sourceId: string;
+  @IsUUID() targetId: string;
+  @IsString() @MaxLength(100) name: string;
+  @ValidateNested() @Type(() => RewriteOptionsDto) options: RewriteOptionsDto;
+}
+export class UpdateRouteDto {
+  @IsOptional() @IsBoolean() active?: boolean;
+  @IsOptional() @IsString() @MaxLength(100) name?: string;
+  @IsOptional() @ValidateNested() @Type(() => RewriteOptionsDto) options?: RewriteOptionsDto;
+}

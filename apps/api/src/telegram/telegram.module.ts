@@ -4,15 +4,14 @@ import {
   type FactoryProvider,
   type ModuleMetadata,
 } from '@nestjs/common';
-import { AiModule } from '@/ai/ai.module';
 import { TelegramService } from './telegram.service';
 import { TELEGRAM_OPTIONS, type TelegramModuleOptions } from './telegram.options';
 
 export type { TelegramModuleOptions } from './telegram.options';
 
 @Module({
-  imports: [AiModule],
   providers: [TelegramService],
+  exports: [TelegramService],
 })
 export class TelegramModule {
   static registerAsync(
@@ -21,6 +20,7 @@ export class TelegramModule {
   ): DynamicModule {
     return {
       module: TelegramModule,
+      global: true,
       imports: options.imports,
       providers: [
         {

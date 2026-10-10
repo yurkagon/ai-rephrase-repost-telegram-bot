@@ -1,0 +1,497 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-10T00:10:54.206167+00:00",
+  "title": "Design System: CopywriteRepostBot",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Accent",
+        "tonalRamp": [
+          "oklch(15% 0.13345 243.36)",
+          "oklch(26% 0.13345 243.36)",
+          "oklch(38% 0.13345 243.36)",
+          "oklch(49% 0.13345 243.36)",
+          "oklch(61% 0.13345 243.36)",
+          "oklch(72% 0.13345 243.36)",
+          "oklch(84% 0.13345 243.36)",
+          "oklch(95% 0.13345 243.36)"
+        ]
+      },
+      "accent-dark": {
+        "role": "primary",
+        "displayName": "Accent Dark",
+        "tonalRamp": [
+          "oklch(15% 0.11542 242.90)",
+          "oklch(26% 0.11542 242.90)",
+          "oklch(38% 0.11542 242.90)",
+          "oklch(49% 0.11542 242.90)",
+          "oklch(61% 0.11542 242.90)",
+          "oklch(72% 0.11542 242.90)",
+          "oklch(84% 0.11542 242.90)",
+          "oklch(95% 0.11542 242.90)"
+        ]
+      },
+      "focus": {
+        "role": "primary",
+        "displayName": "Focus",
+        "tonalRamp": [
+          "oklch(15% 0.13800 241.99)",
+          "oklch(26% 0.13800 241.99)",
+          "oklch(38% 0.13800 241.99)",
+          "oklch(49% 0.13800 241.99)",
+          "oklch(61% 0.13800 241.99)",
+          "oklch(72% 0.13800 241.99)",
+          "oklch(84% 0.13800 241.99)",
+          "oklch(95% 0.13800 241.99)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "tonalRamp": [
+          "oklch(15% 0.03806 242.27)",
+          "oklch(26% 0.03806 242.27)",
+          "oklch(38% 0.03806 242.27)",
+          "oklch(49% 0.03806 242.27)",
+          "oklch(61% 0.03806 242.27)",
+          "oklch(72% 0.03806 242.27)",
+          "oklch(84% 0.03806 242.27)",
+          "oklch(95% 0.03806 242.27)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "tonalRamp": [
+          "oklch(15% 0.03328 242.15)",
+          "oklch(26% 0.03328 242.15)",
+          "oklch(38% 0.03328 242.15)",
+          "oklch(49% 0.03328 242.15)",
+          "oklch(61% 0.03328 242.15)",
+          "oklch(72% 0.03328 242.15)",
+          "oklch(84% 0.03328 242.15)",
+          "oklch(95% 0.03328 242.15)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "tonalRamp": [
+          "oklch(15% 0.00000 0.00)",
+          "oklch(26% 0.00000 0.00)",
+          "oklch(38% 0.00000 0.00)",
+          "oklch(49% 0.00000 0.00)",
+          "oklch(61% 0.00000 0.00)",
+          "oklch(72% 0.00000 0.00)",
+          "oklch(84% 0.00000 0.00)",
+          "oklch(95% 0.00000 0.00)"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Canvas",
+        "tonalRamp": [
+          "oklch(15% 0.00837 236.56)",
+          "oklch(26% 0.00837 236.56)",
+          "oklch(38% 0.00837 236.56)",
+          "oklch(49% 0.00837 236.56)",
+          "oklch(61% 0.00837 236.56)",
+          "oklch(72% 0.00837 236.56)",
+          "oklch(84% 0.00837 236.56)",
+          "oklch(95% 0.00837 236.56)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "tonalRamp": [
+          "oklch(15% 0.01268 236.64)",
+          "oklch(26% 0.01268 236.64)",
+          "oklch(38% 0.01268 236.64)",
+          "oklch(49% 0.01268 236.64)",
+          "oklch(61% 0.01268 236.64)",
+          "oklch(72% 0.01268 236.64)",
+          "oklch(84% 0.01268 236.64)",
+          "oklch(95% 0.01268 236.64)"
+        ]
+      },
+      "rail": {
+        "role": "neutral",
+        "displayName": "Rail",
+        "tonalRamp": [
+          "oklch(15% 0.01089 234.82)",
+          "oklch(26% 0.01089 234.82)",
+          "oklch(38% 0.01089 234.82)",
+          "oklch(49% 0.01089 234.82)",
+          "oklch(61% 0.01089 234.82)",
+          "oklch(72% 0.01089 234.82)",
+          "oklch(84% 0.01089 234.82)",
+          "oklch(95% 0.01089 234.82)"
+        ]
+      },
+      "nav-selected": {
+        "role": "neutral",
+        "displayName": "Nav Selected",
+        "tonalRamp": [
+          "oklch(15% 0.02771 236.18)",
+          "oklch(26% 0.02771 236.18)",
+          "oklch(38% 0.02771 236.18)",
+          "oklch(49% 0.02771 236.18)",
+          "oklch(61% 0.02771 236.18)",
+          "oklch(72% 0.02771 236.18)",
+          "oklch(84% 0.02771 236.18)",
+          "oklch(95% 0.02771 236.18)"
+        ]
+      },
+      "row-selected": {
+        "role": "neutral",
+        "displayName": "Row Selected",
+        "tonalRamp": [
+          "oklch(15% 0.02012 238.67)",
+          "oklch(26% 0.02012 238.67)",
+          "oklch(38% 0.02012 238.67)",
+          "oklch(49% 0.02012 238.67)",
+          "oklch(61% 0.02012 238.67)",
+          "oklch(72% 0.02012 238.67)",
+          "oklch(84% 0.02012 238.67)",
+          "oklch(95% 0.02012 238.67)"
+        ]
+      },
+      "preview": {
+        "role": "neutral",
+        "displayName": "Preview",
+        "tonalRamp": [
+          "oklch(15% 0.02088 236.76)",
+          "oklch(26% 0.02088 236.76)",
+          "oklch(38% 0.02088 236.76)",
+          "oklch(49% 0.02088 236.76)",
+          "oklch(61% 0.02088 236.76)",
+          "oklch(72% 0.02088 236.76)",
+          "oklch(84% 0.02088 236.76)",
+          "oklch(95% 0.02088 236.76)"
+        ]
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "Secondary",
+        "tonalRamp": [
+          "oklch(15% 0.00836 236.56)",
+          "oklch(26% 0.00836 236.56)",
+          "oklch(38% 0.00836 236.56)",
+          "oklch(49% 0.00836 236.56)",
+          "oklch(61% 0.00836 236.56)",
+          "oklch(72% 0.00836 236.56)",
+          "oklch(84% 0.00836 236.56)",
+          "oklch(95% 0.00836 236.56)"
+        ]
+      },
+      "secondary-hover": {
+        "role": "neutral",
+        "displayName": "Secondary Hover",
+        "tonalRamp": [
+          "oklch(15% 0.01681 236.70)",
+          "oklch(26% 0.01681 236.70)",
+          "oklch(38% 0.01681 236.70)",
+          "oklch(49% 0.01681 236.70)",
+          "oklch(61% 0.01681 236.70)",
+          "oklch(72% 0.01681 236.70)",
+          "oklch(84% 0.01681 236.70)",
+          "oklch(95% 0.01681 236.70)"
+        ]
+      },
+      "ai-action": {
+        "role": "primary",
+        "displayName": "Ai Action",
+        "tonalRamp": [
+          "oklch(15% 0.02111 241.36)",
+          "oklch(26% 0.02111 241.36)",
+          "oklch(38% 0.02111 241.36)",
+          "oklch(49% 0.02111 241.36)",
+          "oklch(61% 0.02111 241.36)",
+          "oklch(72% 0.02111 241.36)",
+          "oklch(84% 0.02111 241.36)",
+          "oklch(95% 0.02111 241.36)"
+        ]
+      },
+      "ai-action-hover": {
+        "role": "primary",
+        "displayName": "Ai Action Hover",
+        "tonalRamp": [
+          "oklch(15% 0.03457 238.69)",
+          "oklch(26% 0.03457 238.69)",
+          "oklch(38% 0.03457 238.69)",
+          "oklch(49% 0.03457 238.69)",
+          "oklch(61% 0.03457 238.69)",
+          "oklch(72% 0.03457 238.69)",
+          "oklch(84% 0.03457 238.69)",
+          "oklch(95% 0.03457 238.69)"
+        ]
+      },
+      "editor-border": {
+        "role": "neutral",
+        "displayName": "Editor Border",
+        "tonalRamp": [
+          "oklch(15% 0.02398 240.12)",
+          "oklch(26% 0.02398 240.12)",
+          "oklch(38% 0.02398 240.12)",
+          "oklch(49% 0.02398 240.12)",
+          "oklch(61% 0.02398 240.12)",
+          "oklch(72% 0.02398 240.12)",
+          "oklch(84% 0.02398 240.12)",
+          "oklch(95% 0.02398 240.12)"
+        ]
+      },
+      "status-neutral": {
+        "role": "secondary",
+        "displayName": "Status Neutral",
+        "tonalRamp": [
+          "oklch(15% 0.00670 233.64)",
+          "oklch(26% 0.00670 233.64)",
+          "oklch(38% 0.00670 233.64)",
+          "oklch(49% 0.00670 233.64)",
+          "oklch(61% 0.00670 233.64)",
+          "oklch(72% 0.00670 233.64)",
+          "oklch(84% 0.00670 233.64)",
+          "oklch(95% 0.00670 233.64)"
+        ]
+      },
+      "status-success-ink": {
+        "role": "secondary",
+        "displayName": "Status Success Ink",
+        "tonalRamp": [
+          "oklch(15% 0.08792 158.98)",
+          "oklch(26% 0.08792 158.98)",
+          "oklch(38% 0.08792 158.98)",
+          "oklch(49% 0.08792 158.98)",
+          "oklch(61% 0.08792 158.98)",
+          "oklch(72% 0.08792 158.98)",
+          "oklch(84% 0.08792 158.98)",
+          "oklch(95% 0.08792 158.98)"
+        ]
+      },
+      "status-success": {
+        "role": "secondary",
+        "displayName": "Status Success",
+        "tonalRamp": [
+          "oklch(15% 0.02313 157.59)",
+          "oklch(26% 0.02313 157.59)",
+          "oklch(38% 0.02313 157.59)",
+          "oklch(49% 0.02313 157.59)",
+          "oklch(61% 0.02313 157.59)",
+          "oklch(72% 0.02313 157.59)",
+          "oklch(84% 0.02313 157.59)",
+          "oklch(95% 0.02313 157.59)"
+        ]
+      },
+      "status-progress": {
+        "role": "secondary",
+        "displayName": "Status Progress",
+        "tonalRamp": [
+          "oklch(15% 0.02104 241.35)",
+          "oklch(26% 0.02104 241.35)",
+          "oklch(38% 0.02104 241.35)",
+          "oklch(49% 0.02104 241.35)",
+          "oklch(61% 0.02104 241.35)",
+          "oklch(72% 0.02104 241.35)",
+          "oklch(84% 0.02104 241.35)",
+          "oklch(95% 0.02104 241.35)"
+        ]
+      },
+      "status-warning-ink": {
+        "role": "secondary",
+        "displayName": "Status Warning Ink",
+        "tonalRamp": [
+          "oklch(15% 0.12516 35.55)",
+          "oklch(26% 0.12516 35.55)",
+          "oklch(38% 0.12516 35.55)",
+          "oklch(49% 0.12516 35.55)",
+          "oklch(61% 0.12516 35.55)",
+          "oklch(72% 0.12516 35.55)",
+          "oklch(84% 0.12516 35.55)",
+          "oklch(95% 0.12516 35.55)"
+        ]
+      },
+      "status-warning": {
+        "role": "secondary",
+        "displayName": "Status Warning",
+        "tonalRamp": [
+          "oklch(15% 0.01949 50.16)",
+          "oklch(26% 0.01949 50.16)",
+          "oklch(38% 0.01949 50.16)",
+          "oklch(49% 0.01949 50.16)",
+          "oklch(61% 0.01949 50.16)",
+          "oklch(72% 0.01949 50.16)",
+          "oklch(84% 0.01949 50.16)",
+          "oklch(95% 0.01949 50.16)"
+        ]
+      },
+      "error-ink": {
+        "role": "secondary",
+        "displayName": "Error Ink",
+        "tonalRamp": [
+          "oklch(15% 0.14300 26.65)",
+          "oklch(26% 0.14300 26.65)",
+          "oklch(38% 0.14300 26.65)",
+          "oklch(49% 0.14300 26.65)",
+          "oklch(61% 0.14300 26.65)",
+          "oklch(72% 0.14300 26.65)",
+          "oklch(84% 0.14300 26.65)",
+          "oklch(95% 0.14300 26.65)"
+        ]
+      },
+      "error-surface": {
+        "role": "secondary",
+        "displayName": "Error Surface",
+        "tonalRamp": [
+          "oklch(15% 0.01632 22.08)",
+          "oklch(26% 0.01632 22.08)",
+          "oklch(38% 0.01632 22.08)",
+          "oklch(49% 0.01632 22.08)",
+          "oklch(61% 0.01632 22.08)",
+          "oklch(72% 0.01632 22.08)",
+          "oklch(84% 0.01632 22.08)",
+          "oklch(95% 0.01632 22.08)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Page Headline",
+        "purpose": "General page headings; inbox specializes to 23px."
+      },
+      "message": {
+        "displayName": "Message",
+        "purpose": "Original, draft, and target preview reading text."
+      }
+    },
+    "shadows": [
+      {
+        "name": "confirmation-dialog",
+        "value": "0 16px 60px #172b3a33",
+        "purpose": "Native publication confirmation modal."
+      },
+      {
+        "name": "editor-focus",
+        "value": "inset 0 0 0 2px #168acd",
+        "purpose": "Focused editable content; a focus stroke rather than ambient elevation."
+      }
+    ],
+    "motion": [
+      {
+        "name": "loading-spinner",
+        "value": "spin 1s linear infinite",
+        "purpose": "Loading status only; disabled by prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-desktop",
+        "value": "1100px"
+      },
+      {
+        "name": "sequential-mobile",
+        "value": "760px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Publish to channel. Uses the implemented shared control sizing and states.",
+      "html": "<button class=\"ds-button-primary\">Publish to channel</button>",
+      "css": ".ds-button-primary{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;border:0;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;background:var(--accent, #087abb);color:#fff;}.ds-button-primary:hover:not(:disabled){background:var(--accent-dark, #08669c);}.ds-button-primary:focus-visible{outline:3px solid #168acd;outline-offset:3px;}.ds-button-primary:disabled{opacity:.6;cursor:default;}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Save changes. Uses the implemented shared control sizing and states.",
+      "html": "<button class=\"ds-button-secondary\">Save changes</button>",
+      "css": ".ds-button-secondary{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;border:0;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;background:#eef4f8;color:var(--accent-dark, #08669c);}.ds-button-secondary:hover:not(:disabled){background:#dfebf3;}.ds-button-secondary:focus-visible{outline:3px solid #168acd;outline-offset:3px;}.ds-button-secondary:disabled{opacity:.6;cursor:default;}"
+    },
+    {
+      "name": "AI Button",
+      "kind": "button",
+      "refersTo": "button-ai",
+      "description": "Generate draft. Uses the implemented shared control sizing and states.",
+      "html": "<button class=\"ds-button-ai\">Generate draft</button>",
+      "css": ".ds-button-ai{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;border:0;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;background:#dfedf8;color:#08669c;}.ds-button-ai:hover:not(:disabled){background:#cce4f5;}.ds-button-ai:focus-visible{outline:3px solid #168acd;outline-offset:3px;}.ds-button-ai:disabled{opacity:.6;cursor:default;}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Native labeled field with a visible keyboard outline.",
+      "html": "<label class=\"ds-field\">Channel identifier<input class=\"ds-input\" placeholder=\"@channel_name\" /></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:7px;color:var(--muted, #526574);font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;font-size:13px;font-weight:550;}.ds-input{font:inherit;min-height:42px;border:1px solid var(--border, #dce5eb);border-radius:8px;background:#fff;color:#172b3a;padding:9px 12px;min-width:0;width:100%;caret-color:var(--accent, #087abb);}.ds-input::placeholder{color:#647787;}.ds-input:focus{border-color:var(--accent, #087abb);}.ds-input:focus-visible{outline:3px solid #168acd;outline-offset:3px;}"
+    },
+    {
+      "name": "Current Navigation",
+      "kind": "nav",
+      "refersTo": "navigation-current",
+      "description": "Labeled current-page control from the desktop rail.",
+      "html": "<nav aria-label=\"Workspace\"><button class=\"ds-nav\" aria-current=\"page\"><svg width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M22 12h-6l-2 3h-4l-2-3H2\"/><path d=\"M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z\"/></svg><span>Inbox</span></button></nav>",
+      "css": ".ds-nav{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:10px;font-weight:550;padding:12px 2px;border:0;border-radius:10px;width:70px;color:var(--accent-dark, #08669c);background:#d4e8f5;cursor:pointer;}.ds-nav:hover{background:#dce9f2;}.ds-nav:focus-visible{outline:3px solid #168acd;outline-offset:3px;}"
+    },
+    {
+      "name": "Draft Status",
+      "kind": "chip",
+      "refersTo": "status-success",
+      "description": "Text and green tint identify a draft ready for review.",
+      "html": "<span class=\"ds-status\">Ready for review</span>",
+      "css": ".ds-status{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;font-size:11px;color:#226746;background:#e2f3e8;border-radius:4px;padding:3px 6px;white-space:nowrap;}"
+    },
+    {
+      "name": "Target Message Preview",
+      "kind": "card",
+      "refersTo": "message-preview",
+      "description": "Outgoing message treatment with a named target channel.",
+      "html": "<article class=\"ds-message\"><strong class=\"ds-channel\">Target channel</strong><p>Review the edited message before publication.</p></article>",
+      "css": ".ds-message{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;background:#e3f2fc;color:#172b3a;border-radius:12px 12px 12px 3px;padding:18px 20px;font-size:15px;line-height:1.65;overflow-wrap:anywhere;}.ds-message p{margin:0;white-space:pre-wrap;}.ds-channel{display:block;font-size:13px;color:var(--accent-dark, #08669c);margin-bottom:10px;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Telegram-inspired editorial workspace",
+    "overview": "Telegram Desktop is the approved visual authority: compact channel lists, blue actions, light surfaces, and legible messages. CopywriteRepostBot keeps its own Copywrite wordmark and circular send mark. This is an operating interface whose visual hierarchy follows the editor's work.\n\nWhite lists and controls sit beside a pale blue-gray reading canvas. The source, editable draft, and tinted target preview remain distinct. UI language and generated output language are independently selected between Ukrainian and English.",
+    "keyCharacteristics": [
+      "Compact navigation and inbox beside a readable message workspace.",
+      "Blue actions and selection states on light, mostly flat surfaces.",
+      "Source, draft, and target preview with deliberate publishing confirmation.",
+      "Truthful loading, empty, error, permission, quota, and publication states."
+    ],
+    "rules": [
+      {
+        "name": "The Action Contrast Rule",
+        "body": "Use Action Blue for white-text filled actions; keep Focus Blue for focus treatment.",
+        "section": "colors"
+      },
+      {
+        "name": "The Content First Rule",
+        "body": "Preserve readable message type and text-based state labels when the surrounding interface becomes compact.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Workspace Rule",
+        "body": "Use tonal layers and dividers for the operating workspace; reserve elevation for modal confirmation.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep blue actions, pale reading surfaces, and compact native-style controls.",
+      "Do distinguish original, editable draft, and target preview through labels and surface tint.",
+      "Do keep UI language independent from the output language.",
+      "Do preserve keyboard focus, accessible control names, status text, and mobile access to logout.",
+      "Do show media with its captions and require a saved draft plus confirmation before publication.",
+      "Do report actual data and explicit loading, empty, error, and uncertain states."
+    ],
+    "donts": [
+      "Don't use the brighter focus color for white-text primary action fills.",
+      "Don't add decorative charts, invented metrics, or unsupported claims about AI output.",
+      "Don't compress desktop columns into a mobile side-by-side workspace.",
+      "Don't conceal unsaved edits or present uncertain publication as completed."
+    ]
+  }
+}

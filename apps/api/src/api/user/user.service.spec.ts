@@ -30,12 +30,15 @@ type UserCreateData = {
 describe('UserService management', () => {
   const findUnique = jest.fn();
   const findMany = jest.fn();
+  const findFirst = jest.fn();
   const create = jest.fn();
   const update = jest.fn();
   const remove = jest.fn();
   const del = jest.fn();
   const service = new UserService(
-    { user: { findUnique, findMany, create, update, delete: remove } } as unknown as PrismaService,
+    {
+      user: { findUnique, findFirst, findMany, create, update, delete: remove },
+    } as unknown as PrismaService,
     { del } as unknown as RedisService,
   );
 
@@ -43,7 +46,7 @@ describe('UserService management', () => {
 
   it.each([Role.ADMIN, Role.SUPERADMIN])('creates and hashes a %s password', async (role) => {
     let createData: UserCreateData | undefined;
-    findUnique.mockResolvedValue(null);
+    findFirst.mockResolvedValue(null);
     create.mockImplementation(({ data }: { data: UserCreateData }) => {
       createData = data;
 
@@ -76,7 +79,7 @@ describe('UserService management', () => {
   });
 
   it('rejects a duplicate email before creating a user', async () => {
-    findUnique.mockResolvedValue(existingUser);
+    findFirst.mockResolvedValue(existingUser);
 
     await expect(
       service.create({
@@ -139,5 +142,16 @@ describe('UserService management', () => {
   it('blocks deleting the current user', async () => {
     await expect(service.remove(currentUserId, currentUserId)).rejects.toThrow(ForbiddenException);
     expect(remove).not.toHaveBeenCalled();
+  });
+  it('finds legacy mixed-case emails without changing existing accounts', async () => {
+    findFirst.mockResolvedValue({ ...existingUser, email: 'Ada@Example.COM' });
+    await expect(service.findByEmail('ADA@example.com')).resolves.toMatchObject({
+      id: otherUserId,
+    });
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { email: { equals: 'ada@example.com', mode: 'insensitive' } },
+      }),
+    );
   });
 });

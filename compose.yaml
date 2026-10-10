@@ -17,6 +17,9 @@ services:
 
   redis:
     image: redis:7-alpine
+    command: [redis-server, --appendonly, 'yes']
+    volumes:
+      - redis-data:/data
     ports:
       - '${LOCAL_REDIS_PORT:-6380}:6379'
     healthcheck:
@@ -26,4 +29,5 @@ services:
       retries: 10
 
 volumes:
+  redis-data:
   postgres-data:
