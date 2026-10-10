@@ -64,9 +64,10 @@ The bot receives new posts only from channels where it has been added. This MVP 
 
 ```text
 apps/api/src/
-  api/auth, api/user  accounts, sessions and profiles
-  channels/          Telegram linking, verified channels and route settings
-  posts/             ingestion, drafts, operations, quotas, queue worker and media proxy
+  api/
+    auth/, user/     accounts, sessions and profiles
+    channels/        Telegram linking, verified channels and route settings
+    posts/           ingestion, drafts, operations, quotas, queue worker and media proxy
   ai/                one AiService, provider settings, versioned prompts and rewrite options
   evals/             40-case dataset, deterministic checks and budgeted live runner
   telegram/          Telegraf construction, handlers transport and cancellable polling
@@ -78,6 +79,8 @@ apps/client/src/     bilingual React workspace, editor, account and channel flow
 Feature modules depend on Telegram transport and AI, without reverse imports or service locators. Prisma is used directly; no extra repository layer. Original Telegram content, AI revisions and manual revisions are separate records. Telegram file IDs are reused; previews are fetched through an owner-authorized bounded proxy and never expose the bot token.
 
 ## AI contract and evaluation
+
+Versioned system and developer prompts live in `apps/api/src/ai/prompts/rewrite.ts`. The application and eval runner share this module; validated rewrite options supply its dynamic instructions.
 
 `AiService.rewrite(text, options)` returns validated `{ html, model, promptVersion, durationMs, inputTokens?, outputTokens?, outcome }`. The model's schema remains strictly `{ html: string }` with `jsonSchema`, `strict` and `includeRaw`. System/developer instructions are separate from the untrusted post. Default model: `gpt-6-luna`, overridden with `LLM_MODEL`; Responses API, low reasoning, 30-second timeout, and up to two transport retries.
 

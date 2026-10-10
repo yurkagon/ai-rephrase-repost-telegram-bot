@@ -1,9 +1,12 @@
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { hash } from 'argon2';
-import { AuthService, tokenHash } from './auth.service';
+
 import { UserService } from '@/api/user/user.service';
 import { PrismaService } from '@/infra/prisma/prisma.service';
+
+import { AuthService, tokenHash } from './auth.service';
+
 describe('account sessions', () => {
   const db = {
     refreshSession: {
@@ -33,6 +36,7 @@ describe('account sessions', () => {
     updatedAt: new Date(),
     password: '',
   };
+
   beforeAll(async () => {
     user.password = await hash('correct-password');
   });
@@ -46,6 +50,7 @@ describe('account sessions', () => {
   });
   it('returns a safe user, a session-bound access token and opaque refresh token', async () => {
     const result = await service.login({ email: user.email, password: 'correct-password' });
+
     expect(result.user).not.toHaveProperty('password');
     expect(jwt.verify(result.accessToken)).toMatchObject({
       tokenType: 'access',
@@ -70,7 +75,9 @@ describe('account sessions', () => {
       expiresAt: new Date(Date.now() + 10000),
     });
     db.refreshSession.updateMany.mockResolvedValue({ count: 1 });
+
     const result = await service.refresh('old');
+
     expect(result.refreshToken).not.toBe('old');
     expect(db.refreshSession.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 's1', tokenHash: tokenHash('old') } }),

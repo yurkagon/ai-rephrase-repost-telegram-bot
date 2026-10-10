@@ -1,12 +1,15 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
+
 import type { Environment } from '@/config/env.schema';
 import { AiModule } from '@/ai/ai.module';
-import { ChannelsModule } from '@/channels/channels.module';
+import { ChannelsModule } from '@/api/channels/channels.module';
+
 import { PostsService } from './posts.service';
 import { PostsController } from './posts.controller';
 import { PostsProcessor } from './posts.processor';
+
 @Module({
   imports: [
     AiModule,
@@ -15,6 +18,7 @@ import { PostsProcessor } from './posts.processor';
       inject: [ConfigService],
       useFactory: (config: ConfigService<Environment>) => {
         const url = new URL(config.getOrThrow('REDIS_URL', { infer: true }));
+
         return {
           extraOptions: { manualRegistration: true },
           connection: {

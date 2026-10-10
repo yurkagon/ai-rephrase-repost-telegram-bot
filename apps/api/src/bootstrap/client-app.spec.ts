@@ -1,7 +1,6 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-
 import { Controller, Get, Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -12,6 +11,7 @@ import { API_PREFIX } from '@/config/openapi';
 import { useClientApp } from './client-app';
 
 const INDEX_HTML = '<!doctype html><title>CopywriteRepostBot</title><div id="root"></div>';
+
 const ASSET_JS = 'console.log("bundle")';
 
 @Controller('health')
@@ -53,11 +53,13 @@ describe('serving the client build', () => {
 
   it('serves the client shell at the root', async () => {
     const response = await request(app.getHttpServer()).get('/').expect(200);
+
     expect(response.text).toContain('<div id="root">');
   });
 
   it('serves fingerprinted assets as immutable', async () => {
     const response = await request(app.getHttpServer()).get('/assets/index-abc123.js').expect(200);
+
     expect(response.text).toBe(ASSET_JS);
     expect(response.headers['cache-control']).toBe('public, max-age=31536000, immutable');
   });

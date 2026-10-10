@@ -3,9 +3,11 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, ExternalLink, Plus, Radio, Trash2 } from 'lucide-react';
+
 import { api, body, establish, logout, useSession } from './api';
 import { defaults, type Channel, type Metrics, type Options, type Route, type User } from './types';
 import { ErrorNotice, Loading, OptionsForm, LanguageSwitch } from './components';
+
 export function ChannelsPage() {
   const { t } = useTranslation();
   const { user } = useSession();
@@ -28,12 +30,15 @@ export function ChannelsPage() {
   const refresh = useMutation({
     mutationFn: async () => {
       const result = await api<User>('/auth/me');
+
       await api('/auth/refresh', { method: 'POST' }).then((v) =>
         establish(v as { accessToken: string; user: User }),
       );
+
       return result;
     },
   });
+
   return (
     <section className="settings-page">
       <header className="page-heading">
@@ -81,7 +86,9 @@ export function ChannelsPage() {
         className="add-channel"
         onSubmit={(e) => {
           e.preventDefault();
+
           const form = e.currentTarget;
+
           add.mutate(String(new FormData(form).get('identifier')), {
             onSuccess: () => form.reset(),
           });
@@ -145,6 +152,7 @@ export function ChannelsPage() {
     </section>
   );
 }
+
 export function RoutesPage() {
   const { t } = useTranslation();
   const cache = useQueryClient();
@@ -173,6 +181,7 @@ export function RoutesPage() {
   });
   const [editing, setEditing] = useState<string | null>(null);
   const [editOptions, setEditOptions] = useState<Options>(defaults);
+
   return (
     <section className="settings-page">
       <header className="page-heading">
@@ -188,7 +197,9 @@ export function RoutesPage() {
         className="route-form"
         onSubmit={(e) => {
           e.preventDefault();
+
           const form = e.currentTarget;
+
           create.mutate(Object.fromEntries(new FormData(form)), { onSuccess: () => form.reset() });
         }}
       >
@@ -286,10 +297,13 @@ export function RoutesPage() {
     </section>
   );
 }
+
 export function MetricsPage() {
   const { t } = useTranslation();
   const result = useQuery({ queryKey: ['metrics'], queryFn: () => api<Metrics>('/posts/metrics') });
+
   if (result.isLoading) return <Loading />;
+
   return (
     <section className="settings-page">
       <header className="page-heading">
@@ -338,6 +352,7 @@ export function MetricsPage() {
     </section>
   );
 }
+
 export function AccountPage() {
   const { t } = useTranslation();
   const { user } = useSession();
@@ -358,6 +373,7 @@ export function AccountPage() {
       cache.clear();
     },
   });
+
   return (
     <section className="settings-page narrow">
       <header className="page-heading">

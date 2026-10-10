@@ -1,15 +1,19 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger, OnModuleDestroy, BeforeApplicationShutdown } from '@nestjs/common';
 import type { Job } from 'bullmq';
+import { z } from 'zod';
+
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { AiService } from '@/ai/ai.service';
 import { RewriteError, rewriteOptionsSchema } from '@/ai/rewrite-options';
-import { ChannelsService } from '@/channels/channels.service';
+import { ChannelsService } from '@/api/channels/channels.service';
 import { TelegramService } from '@/telegram/telegram.service';
+
 import { telegramHtml } from './telegram-html';
 import { postInclude } from './posts.service';
-import { z } from 'zod';
+
 const captionsSchema = z.array(z.object({ messageId: z.number(), html: z.string() }));
+
 @Injectable()
 @Processor('posts', { concurrency: 2 })
 export class PostsProcessor
@@ -18,6 +22,7 @@ export class PostsProcessor
 {
   private readonly logger = new Logger(PostsProcessor.name);
   private stopping = false;
+
   constructor(
     private readonly db: PrismaService,
     private readonly ai: AiService,
@@ -26,15 +31,20 @@ export class PostsProcessor
   ) {
     super();
   }
+
   onModuleDestroy() {
     this.stopping = true;
   }
+
   async beforeApplicationShutdown() {
     await this.worker.close();
   }
+
   async process(job: Job<{ id: string }>) {
     const operation = await this.db.operation.findUniqueOrThrow({ where: { id: job.data.id } });
+
     if (this.stopping || operation.status !== 'PENDING') return;
+
     const post = await this.db.post.findUniqueOrThrow({
       where: { id: operation.postId },
       include: postInclude,
@@ -43,8 +53,11 @@ export class PostsProcessor
       where: { id: operation.id, status: 'PENDING' },
       data: { status: 'RUNNING' },
     });
+
     if (!claimed.count) return;
+
     let sendStarted = false;
+
     try {
       if (operation.kind === 'GENERATE') {
         const options = rewriteOptionsSchema.parse(operation.options);
@@ -52,11 +65,14 @@ export class PostsProcessor
           ? post.media.map((m) => ({ messageId: m.messageId, text: m.originalCaption }))
           : [{ messageId: 0, text: post.originalHtml }];
         const captions: { messageId: number; html: string }[] = [];
+
         for (const input of inputs) {
           if (this.stopping) throw new Error('Shutdown interrupted generation');
+
           try {
             const result = await this.ai.rewrite(input.text, options);
             let html: string;
+
             try {
               html = telegramHtml(result.html, post.media.length > 0);
             } catch (error) {
@@ -69,22 +85,28 @@ export class PostsProcessor
                     outcome: 'invalid_html',
                   },
                 });
+
               throw error;
             }
+
             if (result.outcome !== 'skipped')
               await this.db.aiRun.create({
                 data: { postId: post.id, options, ...this.metadata(result) },
               });
+
             captions.push({ messageId: input.messageId, html });
           } catch (error) {
             if (error instanceof RewriteError)
               await this.db.aiRun.create({
                 data: { postId: post.id, options, ...this.metadata(error.metadata) },
               });
+
             throw error;
           }
         }
+
         if (this.stopping) throw new Error('Shutdown interrupted generation');
+
         await this.db.$transaction([
           this.db.postRevision.create({
             data: {
@@ -101,9 +123,13 @@ export class PostsProcessor
       } else {
         const target = post.route.target;
         const rights = await this.channels.checkRights(post.route.ownerId, target.chatId);
+
         if (!rights.canPublish) throw new Error('Bot no longer has permission to publish');
+
         const draft = post.revisions.find((r) => r.version === operation.revision);
+
         if (!draft) throw new Error('Draft missing');
+
         const captions = captionsSchema.parse(draft.captions);
         const html = telegramHtml(draft.html, post.media.length > 0);
         const media = post.media.map((item) => ({
@@ -115,12 +141,16 @@ export class PostsProcessor
           ),
           parse_mode: 'HTML' as const,
         }));
+
         if (media.length > 1 && (media.length < 2 || media.length > 10))
           throw new Error('Invalid album');
         if (!media.length && !html.trim()) throw new Error('Empty post');
         if (this.stopping) throw new Error('Publication cancelled by shutdown');
+
         sendStarted = true;
+
         let ids: number[];
+
         if (media.length > 1)
           ids = (await this.bot.telegram.sendMediaGroup(target.chatId, media)).map(
             (m) => m.message_id,
@@ -131,12 +161,14 @@ export class PostsProcessor
             item.type === 'photo'
               ? await this.bot.telegram.sendPhoto(target.chatId, item.media, item)
               : await this.bot.telegram.sendVideo(target.chatId, item.media, item);
+
           ids = [sent.message_id];
         } else
           ids = [
             (await this.bot.telegram.sendMessage(target.chatId, html, { parse_mode: 'HTML' }))
               .message_id,
           ];
+
         await this.db.$transaction([
           this.db.post.update({
             where: { id: post.id },
@@ -161,6 +193,7 @@ export class PostsProcessor
           : unknown
             ? 'Check Telegram before retrying'
             : 'Operation failed; check permissions or edit and retry';
+
       await this.db.$transaction([
         this.db.post.update({
           where: { id: post.id },
@@ -184,6 +217,7 @@ export class PostsProcessor
       });
     }
   }
+
   private metadata(result: {
     model: string;
     promptVersion: string;

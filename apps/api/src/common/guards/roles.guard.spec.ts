@@ -7,9 +7,11 @@ import { ROLES_KEY, RolesGuard } from './roles.guard';
 
 describe('RolesGuard', () => {
   class ProtectedController {}
+
   const handler = () => undefined;
 
   Reflect.defineMetadata(ROLES_KEY, [Role.SUPERADMIN], handler);
+
   const guard = new RolesGuard(new Reflector());
 
   const contextFor = (role: Role) =>

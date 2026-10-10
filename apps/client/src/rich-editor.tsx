@@ -4,6 +4,7 @@ import { Bold, Italic, Link, Code, Underline } from 'lucide-react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Extension, Mark, Node } from '@tiptap/core';
+
 const TelegramAttributes = Extension.create({
   name: 'telegramAttributes',
   addGlobalAttributes: () => [
@@ -19,11 +20,13 @@ const TelegramAttributes = Extension.create({
     },
   ],
 });
+
 const Spoiler = Mark.create({
   name: 'spoiler',
   parseHTML: () => [{ tag: 'tg-spoiler' }, { tag: 'span.tg-spoiler' }],
   renderHTML: () => ['tg-spoiler', {}, 0],
 });
+
 const Emoji = Node.create({
   name: 'telegramEmoji',
   group: 'inline',
@@ -35,6 +38,7 @@ const Emoji = Node.create({
   parseHTML: () => [{ tag: 'tg-emoji' }],
   renderHTML: ({ node }) => ['tg-emoji', { 'emoji-id': node.attrs.id }, 0],
 });
+
 function editorHtml(html: string) {
   return html
     .replace(/<p[^>]*>/g, '')
@@ -42,6 +46,7 @@ function editorHtml(html: string) {
     .replace(/<\/p>$/g, '')
     .replace(/<br\s*\/?>/g, '\n');
 }
+
 export function RichEditor({
   html,
   onChange,
@@ -77,10 +82,13 @@ export function RichEditor({
     editable: !disabled,
     onUpdate: ({ editor }) => onChange(editorHtml(editor.getHTML())),
   });
+
   useEffect(() => {
     editor?.setEditable(!disabled, false);
   }, [editor, disabled]);
+
   if (!editor) return null;
+
   return (
     <div className="rich-editor">
       <div className="editor-toolbar">
@@ -127,6 +135,7 @@ export function RichEditor({
               t('linkPrompt'),
               (editor.getAttributes('link').href as string) ?? 'https://',
             );
+
             if (href === '') editor.chain().focus().unsetLink().run();
             else if (href && /^https?:\/\//i.test(href))
               editor.chain().focus().setLink({ href }).run();

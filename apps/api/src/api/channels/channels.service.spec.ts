@@ -1,7 +1,9 @@
-import { assertAcyclic, ChannelsService } from './channels.service';
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { TelegramService } from '@/telegram/telegram.service';
 import { RedisService } from '@/infra/redis/redis.service';
+
+import { assertAcyclic, ChannelsService } from './channels.service';
+
 it('rejects self loops and transitive cycles', () => {
   expect(() => assertAcyclic([], 'a', 'a')).toThrow('cycle');
   expect(() =>
@@ -16,6 +18,7 @@ it('rejects self loops and transitive cycles', () => {
   ).toThrow('cycle');
   expect(() => assertAcyclic([{ sourceId: 'a', targetId: 'b' }], 'b', 'c')).not.toThrow();
 });
+
 it('checks user and bot rights instead of trusting usernames', async () => {
   const db = { user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ telegramId: '22' }) } };
   const member = jest
@@ -34,5 +37,6 @@ it('checks user and bot rights instead of trusting usernames', async () => {
     bot as unknown as TelegramService,
     {} as RedisService,
   );
+
   await expect(service.checkRights('u', '@channel')).rejects.toThrow('administrator rights');
 });

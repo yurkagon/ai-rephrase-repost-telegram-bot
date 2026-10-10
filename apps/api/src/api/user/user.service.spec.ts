@@ -7,7 +7,9 @@ import type { RedisService } from '@/infra/redis/redis.service';
 import { UserService } from './user.service';
 
 const currentUserId = '00000000-0000-4000-8000-000000000001';
+
 const otherUserId = '00000000-0000-4000-8000-000000000002';
+
 const existingUser = {
   id: otherUserId,
   email: 'ada@example.com',
@@ -46,6 +48,7 @@ describe('UserService management', () => {
 
   it.each([Role.ADMIN, Role.SUPERADMIN])('creates and hashes a %s password', async (role) => {
     let createData: UserCreateData | undefined;
+
     findFirst.mockResolvedValue(null);
     create.mockImplementation(({ data }: { data: UserCreateData }) => {
       createData = data;

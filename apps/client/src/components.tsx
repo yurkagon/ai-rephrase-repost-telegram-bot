@@ -2,11 +2,14 @@ import { useEffect, lazy, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import DOMPurify from 'dompurify';
 import { LoaderCircle, Send } from 'lucide-react';
-import { mediaBlob } from './api';
 import { useQuery } from '@tanstack/react-query';
+
+import { mediaBlob } from './api';
 import type { Media, Options } from './types';
+
 export function LanguageSwitch() {
   const { i18n, t } = useTranslation();
+
   return (
     <select
       aria-label={t('uiLanguage')}
@@ -19,6 +22,7 @@ export function LanguageSwitch() {
     </select>
   );
 }
+
 export function Brand() {
   return (
     <div className="brand">
@@ -31,6 +35,7 @@ export function Brand() {
     </div>
   );
 }
+
 export function ErrorNotice({ error }: { error: unknown }) {
   return error ? (
     <div className="error-notice" role="alert">
@@ -38,8 +43,10 @@ export function ErrorNotice({ error }: { error: unknown }) {
     </div>
   ) : null;
 }
+
 export function Loading() {
   const { t } = useTranslation();
+
   return (
     <div className="loading" role="status">
       <LoaderCircle size={20} className="spin" />
@@ -47,6 +54,7 @@ export function Loading() {
     </div>
   );
 }
+
 export function Html({ html }: { html: string }) {
   const clean = DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [
@@ -70,8 +78,10 @@ export function Html({ html }: { html: string }) {
     ALLOWED_ATTR: ['href', 'class', 'expandable', 'emoji-id'],
     ADD_TAGS: ['tg-spoiler', 'tg-emoji'],
   });
+
   return <div className="telegram-text" dangerouslySetInnerHTML={{ __html: clean }} />;
 }
+
 export function OptionsForm({
   value,
   onChange,
@@ -82,6 +92,7 @@ export function OptionsForm({
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
+
   return (
     <fieldset className="options-grid" disabled={disabled}>
       {(['mode', 'language', 'tone', 'length'] as const).map((key) => {
@@ -93,6 +104,7 @@ export function OptionsForm({
               : key === 'tone'
                 ? ['neutral', 'formal', 'friendly']
                 : ['preserve', 'concise'];
+
         return (
           <label key={key}>
             {t(key === 'language' ? 'outputLanguage' : key)}
@@ -122,9 +134,11 @@ export function OptionsForm({
     </fieldset>
   );
 }
+
 export const RichEditor = lazy(() =>
   import('./rich-editor').then((module) => ({ default: module.RichEditor })),
 );
+
 export function MediaPreview({ postId, media }: { postId: string; media: Media }) {
   const { t } = useTranslation();
   const element = useRef<HTMLImageElement | HTMLVideoElement>(null);
@@ -134,14 +148,20 @@ export function MediaPreview({ postId, media }: { postId: string; media: Media }
     staleTime: Infinity,
     retry: false,
   });
+
   useEffect(() => {
     if (!result.data || !element.current) return;
+
     const objectUrl = URL.createObjectURL(result.data);
+
     element.current.src = objectUrl;
+
     return () => URL.revokeObjectURL(objectUrl);
   }, [result.data]);
+
   if (result.error) return <p className="media-fallback">{t('mediaUnavailable')}</p>;
   if (!result.data) return <Loading />;
+
   return media.type === 'photo' ? (
     <img
       ref={(node) => {
@@ -170,9 +190,11 @@ export function ConfirmDialog({
   onCancel: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+
   useEffect(() => {
     dialog.current?.showModal();
   }, []);
+
   return (
     <dialog
       ref={dialog}

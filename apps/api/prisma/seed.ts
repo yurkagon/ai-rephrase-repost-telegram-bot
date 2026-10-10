@@ -6,11 +6,14 @@ import { PrismaClient, Role } from '../generated/prisma/client';
 
 const required = (name: string): string => {
   const value = process.env[name]?.trim();
+
   if (!value) throw new Error(`${name} is required for seeding`);
+
   return value;
 };
 
 const pool = new Pool({ connectionString: required('DATABASE_URL') });
+
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
 const seed = async () => {
@@ -19,6 +22,7 @@ const seed = async () => {
 
   if (existing) {
     console.log(`User ${email} already exists; skipped.`);
+
     return;
   }
 

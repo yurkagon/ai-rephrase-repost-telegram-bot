@@ -1,5 +1,6 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
+
 import { environmentSchema, type Environment } from './env.schema';
 
 const validEnv = {
@@ -41,6 +42,7 @@ it('parses configured ports and accepts deployment settings', () => {
     LLM_MODEL: 'custom-model',
     CLIENT_DIST_PATH: '/srv/client',
   });
+
   expect(config).toMatchObject({
     PORT: 3012,
     CLIENT_PORT: 4001,
@@ -126,8 +128,10 @@ it('accepts supported URL schemes and ms duration formats', () => {
 
 it('reports invalid fields without exposing their contents', () => {
   const secret = 'private-credential';
+
   try {
     environmentSchema.parse({ ...validEnv, DATABASE_URL: `bad://${secret}@host`, PORT: secret });
+
     throw new Error('Expected validation to fail');
   } catch (error) {
     expect(error).toBeInstanceOf(Error);
@@ -139,13 +143,19 @@ it('reports invalid fields without exposing their contents', () => {
 
 it('provides validated values globally through the application ConfigModule', async () => {
   const original = process.env;
+
   process.env = { ...validEnv, PORT: '3012', LLM_MODEL: ' ' };
+
   let module: TestingModule | undefined;
+
   try {
     // The module reads environment variables at registration, as Nest ConfigModule.forRoot does.
     const { ConfigModule: ApplicationConfigModule } = await import('./config.module');
+
     module = await Test.createTestingModule({ imports: [ApplicationConfigModule] }).compile();
+
     const config = module.get<ConfigService<Environment, true>>(ConfigService);
+
     expect(config.get('PORT', { infer: true })).toBe(3012);
     expect(config.get('LLM_MODEL', { infer: true })).toBe('gpt-6-luna');
     process.env.PORT = 'invalid';
@@ -163,6 +173,7 @@ it('rejects invalid configuration before creating application services', async (
     ignoreEnvFile: true,
     validate: () => environmentSchema.parse({ ...validEnv, TELEGRAM_BOT_API_TOKEN: '' }),
   });
+
   await expect(
     Test.createTestingModule({
       imports: [configModule],

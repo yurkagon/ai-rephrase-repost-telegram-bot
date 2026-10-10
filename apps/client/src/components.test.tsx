@@ -1,10 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
+
 import { Html, OptionsForm } from './components';
 import { RichEditor } from './rich-editor';
 import { defaults } from './types';
+
 import './i18n';
+
 describe('editor boundaries', () => {
   it('sanitizes a hostile preview without losing safe formatting', () => {
     const { container } = render(
@@ -14,12 +17,14 @@ describe('editor boundaries', () => {
         }
       />,
     );
+
     expect(screen.getByText('Safe').tagName).toBe('B');
     expect(container.querySelector('script,img')).toBeNull();
     expect(container.querySelector('a')).not.toHaveAttribute('href');
   });
   it('translation locks editorial tone and preserves independently chosen output language', async () => {
     let result = defaults;
+
     render(
       <OptionsForm
         value={defaults}
@@ -40,6 +45,7 @@ describe('editor boundaries', () => {
       onChange,
     };
     const { container, rerender } = render(<RichEditor {...props} disabled={true} />);
+
     expect(container.querySelector('blockquote')).toHaveAttribute('expandable');
     expect(container.querySelector('pre code')).toHaveTextContent('a b');
     expect(container.querySelector('pre code')?.textContent).toBe('a\nb');

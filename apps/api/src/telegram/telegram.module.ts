@@ -4,6 +4,7 @@ import {
   type FactoryProvider,
   type ModuleMetadata,
 } from '@nestjs/common';
+
 import { TelegramService } from './telegram.service';
 import { TELEGRAM_OPTIONS, type TelegramModuleOptions } from './telegram.options';
 

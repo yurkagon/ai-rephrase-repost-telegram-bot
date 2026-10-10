@@ -3,6 +3,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { useLocation, useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Check, ChevronDown, Inbox, Send, Sparkles } from 'lucide-react';
+
 import { api, body } from './api';
 import type { Caption, Options, Post, Route } from './types';
 import {
@@ -15,6 +16,7 @@ import {
   RichEditor,
 } from './components';
 import { edits } from './editor-state';
+
 export function Workspace() {
   const { t } = useTranslation();
   const { postId } = useParams();
@@ -49,6 +51,7 @@ export function Workspace() {
         `/${history ? 'history' : 'workspace'}/${id}${routeId ? `?routeId=${routeId}` : ''}`,
       );
   };
+
   return (
     <div className={`workspace ${postId ? 'has-selection' : ''}`}>
       <section className="inbox-pane">
@@ -155,6 +158,7 @@ export function Workspace() {
     </div>
   );
 }
+
 function PostEditor({ post, back }: { post: Post; back: () => void }) {
   const { t } = useTranslation();
   const cache = useQueryClient();
@@ -170,17 +174,22 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
   const locked = ['GENERATING', 'PUBLISHING', 'PUBLISHED', 'PUBLICATION_UNKNOWN'].includes(
     post.status,
   );
+
   useEffect(() => {
     edits.dirty = dirty;
+
     const unload = (e: BeforeUnloadEvent) => {
       if (dirty) e.preventDefault();
     };
+
     window.addEventListener('beforeunload', unload);
+
     return () => {
       edits.dirty = false;
       window.removeEventListener('beforeunload', unload);
     };
   }, [dirty]);
+
   const invalidate = () => {
     setDirty(false);
     void cache.invalidateQueries({ queryKey: ['post', post.id] });
@@ -224,10 +233,13 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
     setCaptions((current) =>
       current.map((c) => (c.messageId === messageId ? { ...c, html: value } : c)),
     );
+
     if (messageId === post.media[0]?.messageId) setHtml(value);
+
     setDirty(true);
   };
   const working = generate.isPending || save.isPending || publish.isPending || resolve.isPending;
+
   return (
     <>
       <header className="detail-header">

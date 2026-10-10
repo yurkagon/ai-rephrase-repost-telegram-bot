@@ -1,5 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+
 const en = {
   product: 'Copywrite',
   subtitle: 'Your Telegram editorial workspace',
@@ -126,6 +127,7 @@ const en = {
     'Translate or rewrite your channel posts with AI, review every change, and publish on your terms.',
   privacyHint: 'Only you can access your connected channels and drafts.',
 };
+
 const uk: typeof en = {
   product: 'Copywrite',
   subtitle: 'Редактор ваших Telegram-каналів',
@@ -252,15 +254,19 @@ const uk: typeof en = {
     'Перекладайте й редагуйте дописи за допомогою AI, перевіряйте зміни та публікуйте, коли готові.',
   privacyHint: 'Лише ви маєте доступ до підключених каналів і чернеток.',
 };
+
 void i18n.use(initReactI18next).init({
   resources: { en: { translation: en }, uk: { translation: uk } },
   lng: localStorage.getItem('language') ?? 'uk',
   fallbackLng: 'uk',
   interpolation: { escapeValue: false },
 });
+
 i18n.on('languageChanged', (language) => {
   localStorage.setItem('language', language);
   document.documentElement.lang = language;
 });
+
 document.documentElement.lang = i18n.language;
+
 export default i18n;

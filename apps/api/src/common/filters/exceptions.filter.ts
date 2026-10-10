@@ -122,6 +122,7 @@ export class ExceptionsFilter implements ExceptionFilter {
 
     if (status >= 500) {
       this.logger.error(line);
+
       return;
     }
 

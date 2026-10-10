@@ -3,9 +3,9 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { ConfigService } from '@nestjs/config';
 
 import { AppModule } from '@/app.module';
-import { ConfigService } from '@nestjs/config';
 import type { Environment } from '@/config/env.schema';
 import { API_PREFIX } from '@/config/openapi';
 import { useClientApp } from '@/bootstrap/client-app';
@@ -21,6 +21,7 @@ async function bootstrap() {
   app.enableShutdownHooks();
   app.use(cookieParser());
   app.use(helmet());
+
   if (config.get('NODE_ENV', { infer: true }) === 'production') app.set('trust proxy', 1);
 
   app.useGlobalPipes(
@@ -54,6 +55,7 @@ async function bootstrap() {
 
   new Logger('Bootstrap').log(`Listening on http://localhost:${port}`);
 }
+
 void bootstrap().catch(() => {
   new Logger('Bootstrap').error(
     'Application failed to start; check configuration and connections.',

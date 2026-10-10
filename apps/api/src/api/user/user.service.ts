@@ -36,7 +36,9 @@ export class UserService {
     }
 
     email = email.trim().toLowerCase();
+
     const existingUser = await this.findByEmail(email);
+
     if (existingUser) {
       throw new ConflictException('User already exists');
     }
@@ -74,6 +76,7 @@ export class UserService {
         password: true,
       },
     });
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -115,6 +118,7 @@ export class UserService {
     }
 
     const password = await hash(newPassword);
+
     await this.prismaService.$transaction([
       this.prismaService.user.update({ where: { id }, data: { password }, select: { id: true } }),
       this.prismaService.refreshSession.deleteMany({ where: { userId: id } }),
@@ -193,6 +197,7 @@ const userSelect = {
 };
 
 export type User = Pick<UserModel, keyof typeof userSelect>;
+
 export type UserWithPassword = UserModel;
 
 export function toSafeUser(user: UserWithPassword): User {

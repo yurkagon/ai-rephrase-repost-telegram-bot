@@ -8,6 +8,7 @@ import type { Environment } from '@/config/env.schema';
 export function createLanguageModel(config: ConfigService<Environment>): BaseChatModel {
   const apiKey = config.getOrThrow('OPENAI_API_KEY', { infer: true });
   const model = config.getOrThrow('LLM_MODEL', { infer: true });
+
   return new ChatOpenAI({
     apiKey,
     model,
@@ -23,6 +24,7 @@ export function createLanguageModel(config: ConfigService<Environment>): BaseCha
       const connectionError =
         error instanceof OpenAIClient.APIConnectionError ||
         (error instanceof Error && error.name === 'TimeoutError');
+
       if (
         getRetryable(error) === false ||
         !(

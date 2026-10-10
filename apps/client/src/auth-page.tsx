@@ -3,9 +3,11 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
+
 import { api, body, establish } from './api';
 import type { User } from './types';
 import { Brand, ErrorNotice, LanguageSwitch } from './components';
+
 export function AuthPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -19,13 +21,16 @@ export function AuthPage() {
     event.preventDefault();
     setError(undefined);
     setPending(true);
+
     const fields = Object.fromEntries(new FormData(event.currentTarget));
+
     try {
       if (mode === 'login') {
         const result = await api<{ user: User; accessToken: string }>('/auth/login', {
           method: 'POST',
           body: body(fields),
         });
+
         cache.clear();
         establish(result);
         navigate('/workspace');
@@ -42,6 +47,7 @@ export function AuthPage() {
       setPending(false);
     }
   };
+
   return (
     <div className="auth-page">
       <header>

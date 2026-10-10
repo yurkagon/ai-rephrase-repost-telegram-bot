@@ -3,19 +3,23 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { BarChart3, Inbox, LogOut, Radio, Route as RouteIcon, Send, UserRound } from 'lucide-react';
+
 import { logout, restore, useSession } from './api';
 import { Brand, LanguageSwitch, Loading } from './components';
 import { AuthPage } from './auth-page';
 import { AccountPage, ChannelsPage, MetricsPage, RoutesPage } from './settings-pages';
 import { Workspace } from './workspace';
 import { edits } from './editor-state';
+
 import './i18n';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: 1, refetchOnWindowFocus: true },
     mutations: { retry: false },
   },
 });
+
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -25,19 +29,23 @@ export function App() {
     </QueryClientProvider>
   );
 }
+
 function Application() {
   const { user, ready } = useSession();
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const cache = useQueryClient();
+
   useEffect(() => {
     void restore();
   }, []);
+
   if (!ready) return <Loading />;
   if (['/login', '/register'].includes(location.pathname))
     return <AuthPage key={location.pathname} />;
   if (!user) return <Navigate to="/login" replace />;
+
   const move = (path: string) => {
     if (!edits.dirty || window.confirm(t('discard'))) navigate(path);
   };
@@ -49,6 +57,7 @@ function Application() {
     { path: '/metrics', label: 'metrics', icon: BarChart3 },
     { path: '/account', label: 'account', icon: UserRound },
   ];
+
   return (
     <div className="app-shell">
       <aside className="navigation">

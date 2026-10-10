@@ -1,7 +1,6 @@
 import { existsSync } from 'node:fs';
 import type { ServerResponse } from 'node:http';
 import { extname, join, sep } from 'node:path';
-
 import { Logger } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { NextFunction, Request, Response } from 'express';

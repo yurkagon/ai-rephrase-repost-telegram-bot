@@ -1,10 +1,12 @@
 import { telegramHtml, messageToHtml } from './telegram-html';
+
 it('preserves Telegram formatting, meaningful links and decoded length', () => {
   expect(telegramHtml('<b>Hello</b> <a href="https://example.com">site</a>')).toContain(
     '<b>Hello</b>',
   );
   expect(() => telegramHtml('&amp;'.repeat(1024), true)).not.toThrow();
 });
+
 it.each([
   '<script>alert(1)</script>',
   '<a href="javascript:alert(1)">x</a>',
@@ -12,6 +14,7 @@ it.each([
   '<img src="x">',
   '<span>x</span>',
 ])('rejects unsafe or unsupported markup %s', (html) => expect(() => telegramHtml(html)).toThrow());
+
 it('rejects oversized messages and captions', () => {
   expect(() => telegramHtml('x'.repeat(4097))).toThrow('length');
   expect(() => telegramHtml('x'.repeat(1025), true)).toThrow('length');

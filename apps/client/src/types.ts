@@ -6,6 +6,7 @@ export type User = {
   telegramId: string | null;
   role: string;
 };
+
 export type Options = {
   mode: 'translate' | 'edit';
   language: 'uk' | 'en';
@@ -13,6 +14,7 @@ export type Options = {
   length: 'preserve' | 'concise';
   removeSource: boolean;
 };
+
 export const defaults: Options = {
   mode: 'translate',
   language: 'uk',
@@ -20,6 +22,7 @@ export const defaults: Options = {
   length: 'preserve',
   removeSource: true,
 };
+
 export type Channel = {
   id: string;
   title: string;
@@ -27,6 +30,7 @@ export type Channel = {
   username: string | null;
   canPublish: boolean;
 };
+
 export type Route = {
   id: string;
   name: string;
@@ -37,13 +41,16 @@ export type Route = {
   active: boolean;
   options: Options;
 };
+
 export type Media = {
   id: string;
   messageId: number;
   type: 'photo' | 'video';
   originalCaption: string;
 };
+
 export type Caption = { messageId: number; html: string };
+
 export type Revision = {
   id: string;
   version: number;
@@ -52,6 +59,7 @@ export type Revision = {
   captions: Caption[];
   createdAt: string;
 };
+
 export type Post = {
   id: string;
   route: Route;
@@ -66,6 +74,7 @@ export type Post = {
   publishedIds: number[];
   createdAt: string;
 };
+
 export type Metrics = {
   calls: number;
   failures: number;
