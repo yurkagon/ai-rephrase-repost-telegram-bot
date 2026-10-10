@@ -652,11 +652,47 @@ fieldset {
 }
 .options-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 .options-grid select {
   font-size: 13px;
+}
+.options-grid .rewrite-strength-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.custom-instructions {
+  grid-column: 1 / -1;
+}
+.custom-instructions > label {
+  margin-bottom: 7px;
+}
+.custom-instructions textarea {
+  display: block;
+  width: 100%;
+  min-height: 100px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: #172b3a;
+  caret-color: var(--accent);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+.custom-instructions textarea::placeholder {
+  color: var(--muted);
+}
+.custom-instructions textarea:focus {
+  border-color: var(--accent);
+}
+.post-instructions {
+  margin-top: 15px;
+}
+.post-instructions textarea {
+  min-height: 68px;
 }
 .check-field {
   grid-column: 1 / -1;
@@ -1096,6 +1132,7 @@ fieldset {
 }
 .password-form {
   margin-top: 40px;
+  margin-bottom: 24px;
   padding-top: 30px;
   border-top: 1px solid var(--border);
 }

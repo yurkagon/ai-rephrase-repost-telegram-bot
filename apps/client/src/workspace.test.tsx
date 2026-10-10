@@ -181,6 +181,15 @@ describe('AI thinking feedback', () => {
     const { cache, container } = renderPost(post);
     const button = await screen.findByRole('button', { name: 'Згенерувати знову' });
     const editor = screen.getByRole('textbox', { name: 'Post HTML' });
+    const instruction = screen.getByRole('textbox', {
+      name: 'Інструкція для цього допису (необов’язково)',
+    });
+
+    expect(instruction).toHaveValue('');
+    expect(instruction).toHaveAttribute('maxlength', '2000');
+    expect(instruction).toHaveAccessibleDescription(/Доповнює правила маршруту/);
+    fireEvent.change(instruction, { target: { value: 'Без емодзі для цього допису.' } });
+
     const scroll = container.querySelector<HTMLElement>('.detail-scroll')!;
     scroll.scrollTop = 350;
     let finishRequest!: (value: unknown) => void;
@@ -197,6 +206,15 @@ describe('AI thinking feedback', () => {
     fireEvent.click(button);
 
     expect(await screen.findByRole('button', { name: 'AI думає' })).toBeDisabled();
+    expect(instruction).toBeDisabled();
+    expect(api).toHaveBeenCalledWith('/posts/post/generate', {
+      method: 'POST',
+      body: JSON.stringify({
+        revision: post.revision,
+        options: post.route.options,
+        postInstructions: 'Без емодзі для цього допису.',
+      }),
+    });
     expect(screen.getByRole('status')).toHaveTextContent('AI думає');
     expect(screen.getByRole('textbox', { name: 'Post HTML' })).toBeDisabled();
     expect(container.querySelectorAll('.ai-thinking-dots span')).toHaveLength(3);
@@ -234,6 +252,8 @@ describe('AI thinking feedback', () => {
     });
 
     expect(await screen.findByRole('button', { name: 'Згенерувати знову' })).toBeEnabled();
+    expect(instruction).toBeEnabled();
+    expect(instruction).toHaveValue('Без емодзі для цього допису.');
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
     expect(container.querySelector('.ai-thinking-dots')).toBeNull();
     expect(container.querySelector('.detail-scroll')).toBe(scroll);
@@ -261,7 +281,7 @@ describe('one HTML body per post', () => {
     const { container } = renderPost(post);
     const editor = await screen.findByRole('textbox', { name: 'Post HTML' });
 
-    expect(screen.getAllByRole('textbox')).toHaveLength(1);
+    expect(screen.getAllByRole('textbox', { name: 'Post HTML' })).toHaveLength(1);
     expect(editor).toHaveValue('<b>Draft</b>');
     expect(container.querySelectorAll('.original-message .telegram-text')).toHaveLength(1);
     expect(container.querySelectorAll('.preview-message .telegram-text')).toHaveLength(1);

@@ -7,6 +7,13 @@ it('preserves Telegram formatting, meaningful links and decoded length', () => {
   expect(() => telegramHtml('&amp;'.repeat(1024), true)).not.toThrow();
 });
 
+it('preserves ordinary Unicode emoji in messages and media captions', () => {
+  const html = '<b>🎉 Новини</b> 🚀 Оновлення вже тут! 👩‍💻';
+
+  expect(telegramHtml(html)).toBe(html);
+  expect(telegramHtml(html, true)).toBe(html);
+});
+
 it.each([
   '<script>alert(1)</script>',
   '<a href="javascript:alert(1)">x</a>',

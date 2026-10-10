@@ -12,7 +12,7 @@ import type { Message } from 'telegraf/types';
 import { RedisService } from '@/infra/redis/redis.service';
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { TelegramService } from '@/telegram/telegram.service';
-import { AiService, defaultRewriteOptions } from '@/ai/ai.service';
+import { AiService, defaultRewriteOptions, rewriteOptionsSchema } from '@/ai/ai.service';
 import { ChannelsService } from '@/api/channels/channels.service';
 import { ExceptionsFilter } from '@/common/filters/exceptions.filter';
 
@@ -167,7 +167,8 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
     );
     app.useGlobalFilters(new ExceptionsFilter());
-    await app.init();
+    // Share one listening server so concurrent Supertest requests cannot close each other's sockets.
+    await app.listen(0, '127.0.0.1');
     db = app.get(PrismaService);
     posts = app.get(PostsService);
     processor = app.get(PostsProcessor);
@@ -309,6 +310,188 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
         })
         .expect(400);
   });
+  it('persists owned route rules and snapshots them for generation despite stale Inbox options', async () => {
+    const customInstructions = 'Use short paragraphs. No emoji.';
+    const postInstructions = 'Use a formal tone for this post.';
+
+    try {
+      await http()
+        .patch(`/api/channels/routes/${routeId}`)
+        .auth(access, { type: 'bearer' })
+        .send({
+          options: {
+            ...defaultRewriteOptions,
+            rewriteStrength: 'light',
+            customInstructions: ` ${customInstructions} `,
+          },
+        })
+        .expect(200);
+
+      const routes = await authorized('/api/channels/routes').expect(200);
+
+      const storedRoutes = z
+        .array(z.object({ id: z.string(), options: rewriteOptionsSchema }))
+        .parse(routes.body);
+
+      expect(storedRoutes.find((route) => route.id === routeId)?.options.customInstructions).toBe(
+        customInstructions,
+      );
+      expect(storedRoutes.find((route) => route.id === routeId)?.options.rewriteStrength).toBe(
+        'light',
+      );
+      await http()
+        .patch(`/api/channels/routes/${routeId}`)
+        .auth(otherAccess, { type: 'bearer' })
+        .send({ options: defaultRewriteOptions })
+        .expect(404);
+
+      const post = await ingestAndFind(message(9876));
+      const response = await http()
+        .post(`/api/posts/${post.id}/generate`)
+        .auth(access, { type: 'bearer' })
+        .send({
+          revision: 0,
+          options: {
+            ...defaultRewriteOptions,
+            rewriteStrength: 'deep',
+            customInstructions: 'Stale rules',
+          },
+          postInstructions: ` ${postInstructions} `,
+        })
+        .expect(202);
+      const operation = await db.operation.findUniqueOrThrow({
+        where: { id: json(response.body).id! },
+      });
+
+      expect(operation.options).toMatchObject({
+        customInstructions,
+        postInstructions,
+        rewriteStrength: 'deep',
+      });
+      expect(
+        (await db.route.findUniqueOrThrow({ where: { id: routeId } })).options,
+      ).not.toHaveProperty('postInstructions');
+      expect((await db.route.findUniqueOrThrow({ where: { id: routeId } })).options).toMatchObject({
+        rewriteStrength: 'light',
+      });
+
+      await http()
+        .patch(`/api/channels/routes/${routeId}`)
+        .auth(access, { type: 'bearer' })
+        .send({ options: defaultRewriteOptions })
+        .expect(200);
+      await processor.process({ data: { id: operation.id } } as Parameters<
+        PostsProcessor['process']
+      >[0]);
+
+      expect(rewrite).toHaveBeenCalledWith(
+        post.originalHtml,
+        expect.objectContaining({ customInstructions, postInstructions, rewriteStrength: 'deep' }),
+      );
+      expect(
+        (await db.aiRun.findFirstOrThrow({ where: { postId: post.id } })).options,
+      ).toMatchObject({ customInstructions, postInstructions, rewriteStrength: 'deep' });
+
+      const another = await ingestAndFind(message(9877));
+
+      await generate(another.id);
+      expect(rewrite).toHaveBeenLastCalledWith(
+        another.originalHtml,
+        expect.objectContaining({ postInstructions: '', rewriteStrength: 'balanced' }),
+      );
+    } finally {
+      await db.route.update({ where: { id: routeId }, data: { options: defaultRewriteOptions } });
+    }
+  });
+
+  it.each([
+    ['oversized', 'x'.repeat(2001)],
+    ['non-text', 123],
+    ['null', null],
+  ])('rejects %s route rules at the API boundary', async (_kind, customInstructions) => {
+    const options = { ...defaultRewriteOptions, customInstructions };
+
+    await http()
+      .patch(`/api/channels/routes/${routeId}`)
+      .auth(access, { type: 'bearer' })
+      .send({ options })
+      .expect(400);
+    await http()
+      .post('/api/channels/routes')
+      .auth(access, { type: 'bearer' })
+      .send({ sourceId, targetId, name: 'Editorial', options })
+      .expect(400);
+  });
+
+  it.each([
+    ['oversized', 'x'.repeat(2001)],
+    ['non-text', 123],
+    ['null', null],
+  ])('rejects %s post instructions before queuing generation', async (_kind, postInstructions) => {
+    const post = await ingestAndFind(message(9878));
+
+    await http()
+      .post(`/api/posts/${post.id}/generate`)
+      .auth(access, { type: 'bearer' })
+      .send({ revision: 0, postInstructions })
+      .expect(400);
+
+    expect(await db.operation.count({ where: { postId: post.id } })).toBe(0);
+    expect((await db.post.findUniqueOrThrow({ where: { id: post.id } })).status).toBe('INBOX');
+    expect(rewrite).not.toHaveBeenCalled();
+  });
+
+  it.each(['extreme', 123, null])(
+    'rejects invalid rewrite strength %j for routes and generation',
+    async (rewriteStrength) => {
+      const options = { ...defaultRewriteOptions, rewriteStrength };
+      const post = await ingestAndFind(message(9879));
+
+      await http()
+        .post('/api/channels/routes')
+        .auth(access, { type: 'bearer' })
+        .send({ sourceId, targetId, name: 'Invalid strength', options })
+        .expect(400);
+      await http()
+        .patch(`/api/channels/routes/${routeId}`)
+        .auth(access, { type: 'bearer' })
+        .send({ options })
+        .expect(400);
+      await http()
+        .post(`/api/posts/${post.id}/generate`)
+        .auth(access, { type: 'bearer' })
+        .send({ revision: 0, options })
+        .expect(400);
+
+      expect(await db.operation.count({ where: { postId: post.id } })).toBe(0);
+      expect(rewrite).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['translate', 'edit'])('rejects the removed AI mode %s', async (mode) => {
+    const options = { ...defaultRewriteOptions, mode };
+    const post = await ingestAndFind(message(9880));
+
+    await http()
+      .post('/api/channels/routes')
+      .auth(access, { type: 'bearer' })
+      .send({ sourceId, targetId, name: 'Obsolete mode', options })
+      .expect(400);
+    await http()
+      .patch(`/api/channels/routes/${routeId}`)
+      .auth(access, { type: 'bearer' })
+      .send({ options })
+      .expect(400);
+    await http()
+      .post(`/api/posts/${post.id}/generate`)
+      .auth(access, { type: 'bearer' })
+      .send({ revision: 0, options })
+      .expect(400);
+
+    expect(await db.operation.count({ where: { postId: post.id } })).toBe(0);
+    expect(rewrite).not.toHaveBeenCalled();
+  });
+
   it('collects without AI, deduplicates updates and skips destination channel', async () => {
     const post = await ingestAndFind(message(10));
 
@@ -853,11 +1036,26 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
 
     if (keys.length) await redis.del(...keys);
 
-    for (let i = 0; i < 20; i++)
-      await http()
-        .post(i % 2 ? '/api/AUTH/LOGIN' : '/api/auth/login')
-        .send({ email: 'not-an-email' })
-        .expect(400);
+    await http().post('/api/auth/login').send({ email: 'not-an-email' }).expect(400);
+
+    const [key] = await redis.keys('auth:limit:*:login');
+
+    expect(await redis.ttl(key)).toBeGreaterThan(590);
+    await redis.expire(key, 300);
+
+    const responses = await Promise.all(
+      Array.from({ length: 20 }, (_, i) =>
+        http()
+          .post(i % 2 ? '/api/AUTH/LOGIN' : '/api/auth/login')
+          .send({ email: 'not-an-email' }),
+      ),
+    );
+
+    expect(responses.filter((response) => response.status === 400)).toHaveLength(19);
+    expect(responses.filter((response) => response.status === 429)).toHaveLength(1);
+    expect(await redis.get(key)).toBe('21');
+    expect(await redis.ttl(key)).toBeLessThanOrEqual(300);
+    expect(await redis.ttl(key)).toBeGreaterThan(0);
 
     await http()
       .post('/api/auth/login')

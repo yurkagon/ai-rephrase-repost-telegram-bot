@@ -400,7 +400,12 @@ export class PostsService implements OnModuleInit, OnModuleDestroy, OnApplicatio
 
   async generate(ownerId: string, id: string, dto: GenerateDto) {
     const post = await this.owned(ownerId, id);
-    const options = rewriteOptionsSchema.parse(dto.options ?? post.route.options);
+    const routeOptions = rewriteOptionsSchema.parse(post.route.options);
+    const options = rewriteOptionsSchema.parse({
+      ...(dto.options ?? routeOptions),
+      customInstructions: routeOptions.customInstructions,
+      postInstructions: dto.postInstructions ?? '',
+    });
 
     return this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))`;

@@ -180,11 +180,13 @@ export class AiService {
 }
 
 export const rewriteOptionsSchema = z.strictObject({
-  mode: z.enum(['translate', 'edit']).default('translate'),
   language: z.enum(['uk', 'en']).default('uk'),
   tone: z.enum(['neutral', 'formal', 'friendly']).default('neutral'),
   length: z.enum(['preserve', 'concise']).default('preserve'),
+  rewriteStrength: z.enum(['light', 'balanced', 'deep']).default('balanced'),
   removeSource: z.boolean().default(true),
+  customInstructions: z.string().trim().max(2000).default(''),
+  postInstructions: z.string().trim().max(2000).optional(),
 });
 
 export const defaultRewriteOptions = rewriteOptionsSchema.parse({});

@@ -43,6 +43,10 @@ test('new account connects channels, reviews an AI draft and publishes it', asyn
   }
 
   await page.goto('/routes');
+  await expect(page.locator('.route-form .options-grid select')).toHaveCount(4);
+  await expect(page.getByLabel('Режим AI', { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('Тон', { exact: true })).toBeEnabled();
+  await page.getByLabel('Ступінь рерайту', { exact: true }).selectOption('deep');
   await page.getByLabel('Назва маршруту').fill('Daily editorial');
   await page.getByLabel('Канал джерела', { exact: true }).selectOption({ label: 'Tech Notes' });
   await page
@@ -53,6 +57,9 @@ test('new account connects channels, reviews an AI draft and publishes it', asyn
   await request.post('http://127.0.0.1:3088/__test/ingest');
   await page.goto('/workspace');
   await page.getByRole('button', { name: /Daily Digest.*Новий/ }).click();
+  await expect(page.locator('.ai-controls .options-grid select')).toHaveCount(4);
+  await expect(page.getByLabel('Ступінь рерайту', { exact: true })).toHaveValue('deep');
+  await expect(page.getByLabel('Тон', { exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Створити AI-чернетку' }).click();
   await expect(page.getByText('Готовий до перегляду', { exact: true }).first()).toBeVisible({
     timeout: 15000,

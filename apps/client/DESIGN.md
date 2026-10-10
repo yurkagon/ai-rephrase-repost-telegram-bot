@@ -215,7 +215,7 @@ Message containers use the shared asymmetric shape and message typography, with 
 
 ### Inputs / Fields
 
-Native inputs and selects have a 42px minimum height, white background, single-pixel Divider stroke, 8px corners, and 9px by 12px padding. Labels sit 7px above fields. Focus changes the border to Action Blue and preserves the shared keyboard outline. AI mode, output language, tone, and length use the common options grid; translation disables tone and length.
+Native inputs and selects have a 42px minimum height, white background, single-pixel Divider stroke, 8px corners, and 9px by 12px padding. Labels sit 7px above fields. Focus changes the border to Action Blue and preserves the shared keyboard outline. Output language, tone, length, and rewrite strength use the common options grid. Rewriting is the only AI task; all four settings remain available unless generation is pending.
 
 ### Navigation
 

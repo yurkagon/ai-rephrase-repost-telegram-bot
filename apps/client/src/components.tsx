@@ -1,4 +1,4 @@
-import { useEffect, lazy, useRef } from 'react';
+import { useEffect, lazy, useRef, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import DOMPurify from 'dompurify';
 import { LoaderCircle, Send } from 'lucide-react';
@@ -89,32 +89,37 @@ export function OptionsForm({
   value,
   onChange,
   disabled = false,
+  showCustomInstructions = false,
 }: {
   value: Options;
   onChange: (v: Options) => void;
   disabled?: boolean;
+  showCustomInstructions?: boolean;
 }) {
   const { t } = useTranslation();
+  const instructionsId = useId();
 
   return (
     <fieldset className="options-grid" disabled={disabled}>
-      {(['mode', 'language', 'tone', 'length'] as const).map((key) => {
+      {(['language', 'tone', 'length', 'rewriteStrength'] as const).map((key) => {
         const choices =
-          key === 'mode'
-            ? ['translate', 'edit']
-            : key === 'language'
-              ? ['uk', 'en']
-              : key === 'tone'
-                ? ['neutral', 'formal', 'friendly']
-                : ['preserve', 'concise'];
+          key === 'language'
+            ? ['uk', 'en']
+            : key === 'tone'
+              ? ['neutral', 'formal', 'friendly']
+              : key === 'length'
+                ? ['preserve', 'concise']
+                : ['light', 'balanced', 'deep'];
 
         return (
           <label key={key}>
             {t(key === 'language' ? 'outputLanguage' : key)}
             <select
               aria-label={t(key === 'language' ? 'outputLanguage' : key)}
-              value={value[key]}
-              disabled={value.mode === 'translate' && (key === 'tone' || key === 'length')}
+              value={value[key] ?? 'balanced'}
+              aria-describedby={
+                key === 'rewriteStrength' ? `${instructionsId}-strength-hint` : undefined
+              }
               onChange={(e) => onChange({ ...value, [key]: e.target.value })}
             >
               {choices.map((choice) => (
@@ -126,6 +131,9 @@ export function OptionsForm({
           </label>
         );
       })}
+      <p className="hint rewrite-strength-hint" id={`${instructionsId}-strength-hint`}>
+        {t(`rewriteStrengthHint_${value.rewriteStrength ?? 'balanced'}`)}
+      </p>
       <label className="check-field">
         <input
           type="checkbox"
@@ -134,6 +142,23 @@ export function OptionsForm({
         />
         {t('removeSource')}
       </label>
+      {showCustomInstructions && (
+        <div className="custom-instructions">
+          <label htmlFor={instructionsId}>{t('customInstructions')}</label>
+          <textarea
+            id={instructionsId}
+            aria-describedby={`${instructionsId}-hint`}
+            rows={4}
+            maxLength={2000}
+            value={value.customInstructions ?? ''}
+            placeholder={t('customInstructionsPlaceholder')}
+            onChange={(event) => onChange({ ...value, customInstructions: event.target.value })}
+          />
+          <p className="hint" id={`${instructionsId}-hint`}>
+            {t('customInstructionsHint')}
+          </p>
+        </div>
+      )}
     </fieldset>
   );
 }

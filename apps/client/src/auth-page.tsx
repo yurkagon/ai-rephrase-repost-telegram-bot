@@ -76,7 +76,7 @@ export function AuthPage() {
             </span>
             <p>{t('draft')}</p>
             <strong>Хороші історії заслуговують на ширшу аудиторію.</strong>
-            <small>AI · {t('translate')}</small>
+            <small>AI · {t('rewrite')}</small>
           </div>
         </section>
         <section className="auth-form">

@@ -10,6 +10,7 @@ import {
   IsString,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
@@ -18,6 +19,16 @@ import { RewriteOptionsDto } from '@/api/channels/dto/channels.dto';
 export class GenerateDto {
   @IsInt() @Min(0) revision: number;
   @IsOptional() @ValidateNested() @Type(() => RewriteOptionsDto) options?: RewriteOptionsDto;
+
+  @ApiProperty({
+    required: false,
+    maxLength: 2000,
+    description: 'Additional instructions for this generation only',
+  })
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsString()
+  @MaxLength(2000)
+  postInstructions?: string;
 }
 
 export class RevisionDto {

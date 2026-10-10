@@ -10,7 +10,7 @@ Built with NestJS, React, PostgreSQL, Prisma, Redis, BullMQ, LangChain and OpenA
 - One shared platform bot; Telegram account linking with an expiring, single-use deep link.
 - Administrator-verified channels and dynamic source → destination routes, with cycle prevention.
 - Persistent inbox for text, photos, videos and albums; deduplication by route and Telegram message/group IDs.
-- On-demand exact translation or editorial rewriting with language, tone, length and source-signature settings.
+- On-demand editorial rewriting with language, tone, length and source-signature settings.
 - Telegram-compatible rich text editor, source/preview and version history.
 - Explicit confirmation before publishing; no automatic publication or fallback to the original after AI failure.
 - Discard unwanted inbox posts with confirmation. Draft versions are deleted; the original record stays to prevent replayed Telegram updates from restoring the post. Posts cannot be discarded while generating, publishing or awaiting delivery verification, or after publication.
@@ -85,9 +85,15 @@ Feature modules depend on Telegram transport and AI, without reverse imports or 
 
 Versioned system and developer prompts live in `apps/api/src/ai/prompts/rewrite.ts`. The application and eval runner share this module; validated rewrite options supply its dynamic instructions. `AiService` handles model creation, response validation and execution metadata. Zod schemas and option defaults are declared below the service class in `ai.service.ts`. The eval judge reuses its static `createLanguageModel()` factory.
 
+Routes support optional rewrite rules (up to 2000 characters), editable on the Routes page. They are stored in the existing route options and snapshotted into each generation operation and AI run. The developer prompt applies them within the fixed rules for factual accuracy, language and Telegram HTML; an empty field preserves the default behavior.
+
+The Inbox also offers an optional post instruction next to Generate/Regenerate (up to 2000 characters). It supplements the current route rules and is snapshotted for that generation; it never updates the route settings. Post-specific style instructions take precedence over route style instructions, within the fixed rewrite constraints.
+
+Rewriting supports light, moderate (default) and deep rewrite strength in route settings and the Inbox. Light keeps most phrasing and structure; moderate rephrases sentences; deep rebuilds the opening, organization and wording while preserving meaning and all material facts. Existing route options default to moderate; each generation records the selected strength. The rewrite-mode removal migration strips the obsolete mode from routes and operation settings while preserving drafts, other settings and historical AI run metadata. Run `pnpm --filter api db:deploy` before starting the updated API.
+
 `AiService.rewrite(text, options)` returns validated `{ html, model, promptVersion, durationMs, inputTokens?, outputTokens?, outcome }`. The model's schema remains strictly `{ html: string }` with `jsonSchema`, `strict` and `includeRaw`. System/developer instructions are separate from the untrusted post. Default model: `gpt-6-luna`, overridden with `LLM_MODEL`; Responses API, low reasoning, 30-second timeout, and up to two transport retries.
 
-Exact translation preserves wording when the input already matches the target language. Editorial mode allows changing wording/tone/length while preserving facts. Meaningful links are retained; only a trailing source signature is removed when enabled, with the YouTube exception. Runtime HTML and Telegram length checks still apply: structured output alone does not ensure safe markup or correct meaning. See [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
+Every generation rewrites the post in the selected output language, including posts already written in that language. Tone, length, rewrite strength and custom instructions guide the wording while preserving facts. Meaningful links are retained; only a trailing source signature is removed when enabled, with the YouTube exception. Runtime HTML and Telegram length checks still apply: structured output alone does not ensure safe markup or correct meaning. See [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
 
 ```sh
 # Offline: check the dataset and deterministic validators, no model requests
@@ -104,7 +110,7 @@ pnpm --filter api evals --live --budget-calls 40 --model YOUR_MODEL \
   --out eval-reports/alternative.json --compare eval-reports/candidate.json
 ```
 
-Keep baseline reports before editing a prompt and bump `promptVersion` when its rules change. Reports contain each case's failures, available token usage, latency, model and prompt version. Deterministic checks cover required facts/links, source removal, unchanged wording, safe HTML and message lengths; they do not prove translation quality. Live LLM grades are advisory and must be calibrated with human review, following [OpenAI evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices). An [example offline report](apps/api/src/evals/examples/reference-check.md) and its JSON are included in the repository. Never present `reference_self_check` results as measured model quality. CI performs no paid API calls.
+Keep baseline reports before editing a prompt and bump `promptVersion` when its rules change. Reports contain each case's failures, available token usage, latency, model and prompt version. Deterministic checks cover required facts/links, source removal, safe HTML and message lengths; they do not prove rewrite quality. Live LLM grades are advisory and must be calibrated with human review, following [OpenAI evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices). An [example offline report](apps/api/src/evals/examples/reference-check.md) and its JSON are included in the repository. Never present `reference_self_check` results as measured model quality. CI performs no paid API calls.
 
 ## Verification
 
@@ -161,4 +167,4 @@ Protect backups like channel content and account data. Restore PostgreSQL first;
 
 ## Limits
 
-No scraping/MTProto, channel history import, automatic/scheduled posting, teams, payments, RAG, agents or demo mode. The album's 1000 ms quiet period is a completeness heuristic; Telegram updates are retained by Telegram for a limited time. Telegram sending has no general exactly-once guarantee. Media preview is capped at 20 MiB and may be unavailable even when Telegram can republish the saved file. Live provider access, real translation quality and actual public deployment require separate smoke tests; offline test success is not evidence of those.
+No scraping/MTProto, channel history import, automatic/scheduled posting, teams, payments, RAG, agents or demo mode. The album's 1000 ms quiet period is a completeness heuristic; Telegram updates are retained by Telegram for a limited time. Telegram sending has no general exactly-once guarantee. Media preview is capped at 20 MiB and may be unavailable even when Telegram can republish the saved file. Live provider access, real rewrite quality and actual public deployment require separate smoke tests; offline test success is not evidence of those.

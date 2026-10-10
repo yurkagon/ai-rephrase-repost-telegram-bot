@@ -8,19 +8,21 @@ export type User = {
 };
 
 export type Options = {
-  mode: 'translate' | 'edit';
   language: 'uk' | 'en';
   tone: 'neutral' | 'formal' | 'friendly';
   length: 'preserve' | 'concise';
+  rewriteStrength?: 'light' | 'balanced' | 'deep';
   removeSource: boolean;
+  customInstructions?: string;
 };
 
 export const defaults: Options = {
-  mode: 'translate',
   language: 'uk',
   tone: 'neutral',
   length: 'preserve',
+  rewriteStrength: 'balanced',
   removeSource: true,
+  customInstructions: '',
 };
 
 export type Channel = {

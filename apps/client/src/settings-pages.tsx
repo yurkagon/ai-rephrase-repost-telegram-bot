@@ -247,7 +247,7 @@ export function RoutesPage() {
             </label>
           ))}
         </div>
-        <OptionsForm value={options} onChange={setOptions} />
+        <OptionsForm value={options} onChange={setOptions} showCustomInstructions />
         <button className="primary" disabled={create.isPending || (channels.data?.length ?? 0) < 2}>
           <Plus size={17} />
           {t('createRoute')}
@@ -263,8 +263,7 @@ export function RoutesPage() {
                   {route.source.title} → {route.target.title}
                 </p>
                 <small>
-                  {t(route.options.mode)} · {t(route.options.language)} ·{' '}
-                  {t(route.active ? 'active' : 'paused')}
+                  {t(route.options.language)} · {t(route.active ? 'active' : 'paused')}
                 </small>
               </div>
               <div className="row-actions">
@@ -299,7 +298,7 @@ export function RoutesPage() {
             </header>
             {editing === route.id && (
               <div className="route-options">
-                <OptionsForm value={editOptions} onChange={setEditOptions} />
+                <OptionsForm value={editOptions} onChange={setEditOptions} showCustomInstructions />
                 <button
                   className="primary"
                   disabled={update.isPending}

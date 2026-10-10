@@ -162,7 +162,7 @@ describe('editor boundaries', () => {
     expect(container.querySelector('script,img')).toBeNull();
     expect(container.querySelector('a')).not.toHaveAttribute('href');
   });
-  it('translation locks editorial tone and preserves independently chosen output language', async () => {
+  it('always exposes rewrite settings and preserves independently chosen output language', async () => {
     let result = defaults;
 
     render(
@@ -173,11 +173,65 @@ describe('editor boundaries', () => {
         }}
       />,
     );
-    expect(screen.getByLabelText('Тон')).toBeDisabled();
+    expect(screen.queryByLabelText('Режим AI')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Тон')).toBeEnabled();
+    expect(screen.getByLabelText('Довжина')).toBeEnabled();
+    expect(screen.getByLabelText('Ступінь рерайту')).toBeEnabled();
     await userEvent.selectOptions(screen.getByLabelText('Мова результату'), 'en');
     expect(result.language).toBe('en');
-    expect(result.mode).toBe('translate');
+    expect(result).not.toHaveProperty('mode');
   });
+  it('defaults legacy options to moderate strength and edits strength independently from language', async () => {
+    const onChange = vi.fn();
+    const legacy = {
+      language: 'en' as const,
+      tone: 'neutral' as const,
+      length: 'preserve' as const,
+      removeSource: true,
+    };
+    const { rerender } = render(<OptionsForm value={legacy} onChange={onChange} />);
+    const strength = screen.getByLabelText('Ступінь рерайту');
+
+    expect(strength).toHaveValue('balanced');
+    expect(strength).toHaveAccessibleDescription(/Нові формулювання/);
+    await userEvent.selectOptions(strength, 'deep');
+    expect(onChange).toHaveBeenCalledWith({ ...legacy, rewriteStrength: 'deep' });
+
+    rerender(<OptionsForm value={{ ...legacy, rewriteStrength: 'deep' }} onChange={onChange} />);
+    expect(strength).toHaveAccessibleDescription(/Новий початок, структура/);
+
+    rerender(
+      <OptionsForm value={{ ...legacy, rewriteStrength: 'deep' }} onChange={onChange} disabled />,
+    );
+    expect(strength).toBeDisabled();
+  });
+
+  it('edits optional route rules, preserves other settings and disables the field with the form', () => {
+    const onChange = vi.fn();
+    const props = { value: defaults, onChange, showCustomInstructions: true };
+    const { rerender } = render(<OptionsForm {...props} />);
+    const field = screen.getByLabelText('Правила рерайту (необов’язково)');
+
+    expect(field).toHaveValue('');
+    expect(field).toHaveAttribute('maxlength', '2000');
+    expect(field).toHaveAccessibleDescription(/До 2000 символів/);
+    fireEvent.change(field, { target: { value: 'Без емодзі.' } });
+    expect(onChange).toHaveBeenCalledWith({ ...defaults, customInstructions: 'Без емодзі.' });
+
+    rerender(
+      <OptionsForm
+        {...props}
+        value={{ ...defaults, customInstructions: 'Без емодзі.' }}
+        disabled
+      />,
+    );
+    expect(field).toHaveValue('Без емодзі.');
+    expect(field).toBeDisabled();
+
+    rerender(<OptionsForm value={defaults} onChange={onChange} />);
+    expect(screen.queryByLabelText('Правила рерайту (необов’язково)')).not.toBeInTheDocument();
+  });
+
   it('preserves Telegram quotes and code newlines without treating mount as an edit', async () => {
     const onChange = vi.fn();
     const props = {

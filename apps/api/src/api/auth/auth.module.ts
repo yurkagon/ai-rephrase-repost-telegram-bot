@@ -5,8 +5,8 @@ import { JwtModule } from '@nestjs/jwt';
 
 import type { Environment } from '@/config/env.schema';
 import { UserModule } from '@/api/user/user.module';
+import { RateLimitGuard } from '@/common/guards/rate-limit.guard';
 
-import { PublicAuthGuard } from './public-auth.guard';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -26,6 +26,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, PublicAuthGuard],
+  providers: [AuthService, JwtStrategy, RateLimitGuard],
 })
 export class AuthModule {}

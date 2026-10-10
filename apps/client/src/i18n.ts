@@ -34,7 +34,7 @@ const en = {
     'In Telegram, choose a post from another channel and forward it into your collection channel, not to the bot in a private chat. You can also write a new post there. Text, photos, videos and albums are supported. The bot receives the new channel post and it appears in Inbox without starting AI or publishing anything.',
   guideRewriteTitle: 'Create and edit an AI draft',
   guideRewriteBody:
-    'Open the post in Inbox, choose exact translation or editorial rewrite, and select Ukrainian or English as the output language. Create the AI draft, wait for processing, then review the result. Edit the wording and formatting if needed, check the Telegram preview, and save your changes. Always check facts and links yourself.',
+    'Open the post in Inbox, select Ukrainian or English as the output language, and choose the tone, length and rewrite strength. Create the AI draft, wait for processing, then review the result. Edit the wording and formatting if needed, check the Telegram preview, and save your changes. Always check facts and links yourself.',
   guidePublishTitle: 'Publish or discard the post',
   guidePublishBody:
     'When the saved draft is ready, click “Publish to channel” and confirm. The bot sends that version with its media to the destination channel; the post then appears in Published. If you do not want to publish it, use “Discard post”: after confirmation it leaves Inbox and its drafts are deleted.',
@@ -95,9 +95,7 @@ const en = {
   noRoutes: 'Create your first route',
   noRoutesHint: 'Connect a source and a destination channel to start collecting posts.',
   choose: 'Select a channel',
-  mode: 'AI mode',
-  translate: 'Exact translation',
-  edit: 'Editorial rewrite',
+  rewrite: 'Rewrite',
   outputLanguage: 'Output language',
   uk: 'Ukrainian',
   en: 'English',
@@ -108,7 +106,21 @@ const en = {
   length: 'Length',
   preserve: 'Keep length',
   concise: 'Concise',
+  rewriteStrength: 'Rewrite strength',
+  light: 'Light',
+  balanced: 'Moderate',
+  deep: 'Deep',
+  rewriteStrengthHint_light:
+    'Small wording improvements; keep the original structure and most phrasing.',
+  rewriteStrengthHint_balanced:
+    'Rephrase sentences and improve flow; keep the main organization recognizable.',
+  rewriteStrengthHint_deep:
+    'A new opening, structure and wording, preserving meaning and every material fact.',
   removeSource: 'Remove trailing source signature (keep YouTube)',
+  customInstructions: 'Rewrite rules (optional)',
+  customInstructionsPlaceholder: 'Use short paragraphs. Avoid emoji. Keep product names unchanged.',
+  customInstructionsHint:
+    'Applied to every generation on this route. Up to 2000 characters. Facts, language and Telegram formatting rules still apply.',
   allRoutes: 'All routes',
   noPosts: 'Your inbox is ready',
   noPostsHint:
@@ -120,6 +132,9 @@ const en = {
   preview: 'Telegram preview',
   generate: 'Create AI draft',
   regenerate: 'Regenerate',
+  postInstructions: 'Instructions for this post (optional)',
+  postInstructionsPlaceholder: 'For example: use short paragraphs and avoid emoji.',
+  postInstructionsHint: 'Adds to the route rules for this generation. Up to 2000 characters.',
   thinking: 'AI is thinking',
   save: 'Save changes',
   publish: 'Publish to channel',
@@ -180,8 +195,7 @@ const en = {
   passwordChanged: 'Password changed. Sign in again.',
   saved: 'Saved',
   welcome: 'From incoming post to polished publication.',
-  authHint:
-    'Translate or rewrite your channel posts with AI, review every change, and publish on your terms.',
+  authHint: 'Rewrite your channel posts with AI, review every change, and publish on your terms.',
   privacyHint: 'Only you can access your connected channels and drafts.',
 };
 
@@ -218,7 +232,7 @@ const uk: typeof en = {
     'У Telegram виберіть допис з іншого каналу й перешліть його у свій канал збору, а не в особистий чат із ботом. Можна також написати там новий допис. Підтримуються текст, фото, відео й альбоми. Бот отримає новий допис каналу, і він з’явиться у Вхідних (Inbox) без AI-запиту чи публікації.',
   guideRewriteTitle: 'Створіть і відредагуйте AI-чернетку',
   guideRewriteBody:
-    'Відкрийте допис у Вхідних, виберіть точний переклад або редагування та мову результату: українську чи англійську. Створіть AI-чернетку, дочекайтеся обробки й перевірте результат. За потреби змініть текст і форматування, перегляньте прев’ю Telegram та збережіть зміни. Обов’язково перевірте факти й посилання самостійно.',
+    'Відкрийте допис у Вхідних, виберіть мову результату: українську чи англійську, а також тон, довжину й ступінь рерайту. Створіть AI-чернетку, дочекайтеся обробки й перевірте результат. За потреби змініть текст і форматування, перегляньте прев’ю Telegram та збережіть зміни. Обов’язково перевірте факти й посилання самостійно.',
   guidePublishTitle: 'Опублікуйте або відхиліть допис',
   guidePublishBody:
     'Коли збережена чернетка готова, натисніть «Опублікувати в каналі» та підтвердьте дію. Бот надішле цю версію з медіа в канал призначення, а допис з’явиться в «Опублікованих». Якщо публікувати його не потрібно, виберіть «Відхилити допис»: після підтвердження він зникне з Вхідних, а його чернетки будуть видалені.',
@@ -278,9 +292,7 @@ const uk: typeof en = {
   noRoutes: 'Створіть перший маршрут',
   noRoutesHint: 'Підключіть джерело та канал призначення, щоб отримувати дописи.',
   choose: 'Оберіть канал',
-  mode: 'Режим AI',
-  translate: 'Точний переклад',
-  edit: 'Редагування тексту',
+  rewrite: 'Рерайт',
   outputLanguage: 'Мова результату',
   uk: 'Українська',
   en: 'Англійська',
@@ -291,7 +303,21 @@ const uk: typeof en = {
   length: 'Довжина',
   preserve: 'Зберегти довжину',
   concise: 'Стисліше',
+  rewriteStrength: 'Ступінь рерайту',
+  light: 'Легкий',
+  balanced: 'Помірний',
+  deep: 'Глибокий',
+  rewriteStrengthHint_light:
+    'Невеликі зміни формулювань; структура й більшість фраз залишаються близькими до оригіналу.',
+  rewriteStrengthHint_balanced:
+    'Нові формулювання й плавніший виклад; основна структура залишається впізнаваною.',
+  rewriteStrengthHint_deep:
+    'Новий початок, структура й формулювання зі збереженням змісту та всіх суттєвих фактів.',
   removeSource: 'Видалити кінцевий підпис джерела (крім YouTube)',
+  customInstructions: 'Правила рерайту (необов’язково)',
+  customInstructionsPlaceholder: 'Короткі абзаци. Без емодзі. Залишай назви продуктів без змін.',
+  customInstructionsHint:
+    'Застосовуються до кожної генерації на цьому маршруті. До 2000 символів. Правила фактів, мови та Telegram-форматування залишаються чинними.',
   allRoutes: 'Усі маршрути',
   noPosts: 'Вхідні готові до роботи',
   noPostsHint:
@@ -303,6 +329,9 @@ const uk: typeof en = {
   preview: 'Прев’ю Telegram',
   generate: 'Створити AI-чернетку',
   regenerate: 'Згенерувати знову',
+  postInstructions: 'Інструкція для цього допису (необов’язково)',
+  postInstructionsPlaceholder: 'Наприклад: короткі абзаци, без емодзі.',
+  postInstructionsHint: 'Доповнює правила маршруту для цієї генерації. До 2000 символів.',
   thinking: 'AI думає',
   save: 'Зберегти зміни',
   publish: 'Опублікувати в каналі',
@@ -363,8 +392,7 @@ const uk: typeof en = {
   passwordChanged: 'Пароль змінено. Увійдіть знову.',
   saved: 'Збережено',
   welcome: 'Від нового допису до готової публікації.',
-  authHint:
-    'Перекладайте й редагуйте дописи за допомогою AI, перевіряйте зміни та публікуйте, коли готові.',
+  authHint: 'Переписуйте дописи за допомогою AI, перевіряйте зміни та публікуйте, коли готові.',
   privacyHint: 'Лише ви маєте доступ до підключених каналів і чернеток.',
 };
 

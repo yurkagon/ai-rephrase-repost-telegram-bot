@@ -165,6 +165,7 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
   const [html, setHtml] = useState(revision?.html ?? originalHtml);
   const [draftId, setDraftId] = useState(revision?.id);
   const [options, setOptions] = useState<Options>(post.route.options);
+  const [postInstructions, setPostInstructions] = useState('');
   const [dirty, setDirty] = useState(false);
   const [confirmation, setConfirmation] = useState<'publish' | 'discard' | null>(null);
   const locked = [
@@ -208,7 +209,7 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
     mutationFn: () =>
       api(`/posts/${post.id}/generate`, {
         method: 'POST',
-        body: body({ revision: post.revision, options }),
+        body: body({ revision: post.revision, options, postInstructions }),
       }),
     onSuccess: invalidate,
   });
@@ -326,6 +327,22 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
         {!['PUBLISHED', 'PUBLICATION_UNKNOWN', 'SKIPPED'].includes(post.status) && (
           <div className="ai-controls">
             <OptionsForm value={options} onChange={setOptions} disabled={locked || working} />
+            <div className="custom-instructions post-instructions">
+              <label htmlFor={`post-instructions-${post.id}`}>{t('postInstructions')}</label>
+              <textarea
+                id={`post-instructions-${post.id}`}
+                aria-describedby={`post-instructions-${post.id}-hint`}
+                rows={2}
+                maxLength={2000}
+                value={postInstructions}
+                disabled={locked || working}
+                placeholder={t('postInstructionsPlaceholder')}
+                onChange={(event) => setPostInstructions(event.target.value)}
+              />
+              <p className="hint" id={`post-instructions-${post.id}-hint`}>
+                {t('postInstructionsHint')}
+              </p>
+            </div>
             <button
               className="ai-button"
               aria-busy={generating}

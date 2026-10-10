@@ -10,7 +10,6 @@ export type EvalCase = {
   links: string[];
   removedLinks: string[];
   caption: boolean;
-  preserveExact: boolean;
 };
 
 export function evaluate(item: EvalCase, html: string) {
@@ -29,8 +28,6 @@ export function evaluate(item: EvalCase, html: string) {
   for (const link of item.removedLinks)
     if (html.includes(link)) errors.push(`source_not_removed:${link}`);
 
-  if (item.preserveExact && html !== item.input) errors.push('wording_changed');
-
   if (!html.trim()) errors.push('empty');
 
   return { pass: errors.length === 0, errors };
@@ -44,5 +41,4 @@ export const evalCaseSchema = z.object({
   links: z.array(z.string()),
   removedLinks: z.array(z.string()),
   caption: z.boolean(),
-  preserveExact: z.boolean(),
 });

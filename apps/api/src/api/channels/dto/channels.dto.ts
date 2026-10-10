@@ -5,18 +5,27 @@ import {
   IsString,
   IsUUID,
   MaxLength,
+  ValidateIf,
   ValidateNested,
   IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class RewriteOptionsDto {
-  @ApiProperty({ enum: ['translate', 'edit'] }) @IsIn(['translate', 'edit']) mode:
-    'translate' | 'edit';
   @ApiProperty({ enum: ['uk', 'en'] }) @IsIn(['uk', 'en']) language: 'uk' | 'en';
   @IsIn(['neutral', 'formal', 'friendly']) tone: 'neutral' | 'formal' | 'friendly';
   @IsIn(['preserve', 'concise']) length: 'preserve' | 'concise';
+  @ApiProperty({ required: false, enum: ['light', 'balanced', 'deep'], default: 'balanced' })
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsIn(['light', 'balanced', 'deep'])
+  rewriteStrength?: 'light' | 'balanced' | 'deep';
+
   @IsBoolean() removeSource: boolean;
+  @ApiProperty({ required: false, maxLength: 2000, description: 'Additional rewrite rules' })
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsString()
+  @MaxLength(2000)
+  customInstructions?: string;
 }
 
 export class AddChannelDto {

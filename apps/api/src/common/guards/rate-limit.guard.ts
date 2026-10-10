@@ -3,11 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
 import { createHash } from 'node:crypto';
 
-import { RedisService } from '@/infra/redis/redis.service';
 import type { Environment } from '@/config/env.schema';
+import { RedisService } from '@/infra/redis/redis.service';
 
 @Injectable()
-export class PublicAuthGuard implements CanActivate {
+export class RateLimitGuard implements CanActivate {
   constructor(
     private readonly redis: RedisService,
     private readonly config: ConfigService<Environment>,
@@ -28,13 +28,19 @@ export class PublicAuthGuard implements CanActivate {
       .digest('hex');
     const action = context.getHandler().name;
     const key = `auth:limit:${ip}:${action}`;
-    const count = Number(
-      await this.redis.client.eval(
-        "local n = redis.call('INCR', KEYS[1]); if n == 1 then redis.call('EXPIRE', KEYS[1], 600) end; return n",
-        1,
-        key,
-      ),
-    );
+
+    // NX preserves the expiry set by the first request in this window.
+    const results = await this.redis.client.multi().incr(key).expire(key, 600, 'NX').exec();
+
+    if (!results) throw new Error('Redis rate limit transaction aborted');
+
+    for (const [error] of results) {
+      if (error) throw error;
+    }
+
+    const count = results[0]?.[1];
+
+    if (typeof count !== 'number') throw new Error('Invalid Redis rate limit response');
 
     if (count > (action === 'refresh' ? 120 : 20)) throw new HttpException('Try again later', 429);
 
