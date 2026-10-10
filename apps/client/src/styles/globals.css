@@ -527,6 +527,7 @@ time {
   margin-left: auto;
 }
 .detail-scroll {
+  position: relative;
   padding: 24px 32px;
   overflow: auto;
   flex: 1;
