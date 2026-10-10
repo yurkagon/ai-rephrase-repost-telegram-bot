@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { StrictMode } from 'react';
 
 import * as api from './api';
 import { ChannelAvatar, ErrorNotice, Html, OptionsForm } from './components';
@@ -122,6 +123,32 @@ describe('channel access errors', () => {
 });
 
 describe('editor boundaries', () => {
+  it('updates a server draft without remounting the editor or marking it as a manual edit', () => {
+    const onChange = vi.fn();
+    const { container, rerender } = render(
+      <StrictMode>
+        <RichEditor html="Old draft" onChange={onChange} disabled={false} />
+      </StrictMode>,
+    );
+    const textbox = container.querySelector('.tiptap');
+
+    rerender(
+      <StrictMode>
+        <RichEditor
+          html={'<b>New draft</b>\nSecond line\n<pre><code>a\nb</code></pre>'}
+          onChange={onChange}
+          disabled={false}
+        />
+      </StrictMode>,
+    );
+
+    expect(container.querySelector('.tiptap')).toBe(textbox);
+    expect(textbox).toHaveTextContent('New draft');
+    expect(container.querySelector('br')).not.toBeNull();
+    expect(container.querySelector('pre code')?.textContent).toBe('a\nb');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('sanitizes a hostile preview without losing safe formatting', () => {
     const { container } = render(
       <Html

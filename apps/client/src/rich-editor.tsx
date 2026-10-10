@@ -47,6 +47,13 @@ function editorHtml(html: string) {
     .replace(/<br\s*\/?>/g, '\n');
 }
 
+function editorContent(html: string) {
+  return html
+    .split(/(<pre\b[^>]*>[\s\S]*?<\/pre>)/gi)
+    .map((part) => (/^<pre\b/i.test(part) ? part : part.replace(/\n/g, '<br>')))
+    .join('');
+}
+
 export function RichEditor({
   html,
   onChange,
@@ -72,10 +79,7 @@ export function RichEditor({
       Spoiler,
       Emoji,
     ],
-    content: html
-      .split(/(<pre\b[^>]*>[\s\S]*?<\/pre>)/gi)
-      .map((part) => (/^<pre\b/i.test(part) ? part : part.replace(/\n/g, '<br>')))
-      .join(''),
+    content: editorContent(html),
     editorProps: {
       attributes: { role: 'textbox', 'aria-label': t('draft'), 'aria-multiline': 'true' },
     },
@@ -86,6 +90,11 @@ export function RichEditor({
   useEffect(() => {
     editor?.setEditable(!disabled, false);
   }, [editor, disabled]);
+
+  useEffect(() => {
+    if (editor && !editor.isDestroyed && editorHtml(editor.getHTML()) !== html)
+      editor.commands.setContent(editorContent(html), { emitUpdate: false });
+  }, [editor, html]);
 
   if (!editor) return null;
 

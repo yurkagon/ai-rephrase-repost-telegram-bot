@@ -180,6 +180,9 @@ describe('AI thinking feedback', () => {
     let post = fixture(0);
     const { cache, container } = renderPost(post);
     const button = await screen.findByRole('button', { name: 'Згенерувати знову' });
+    const editor = screen.getByRole('textbox', { name: 'Post HTML' });
+    const scroll = container.querySelector<HTMLElement>('.detail-scroll')!;
+    scroll.scrollTop = 350;
     let finishRequest!: (value: unknown) => void;
     const request = new Promise((resolve) => {
       finishRequest = resolve;
@@ -205,8 +208,27 @@ describe('AI thinking feedback', () => {
     );
 
     expect(screen.getByRole('button', { name: 'AI думає' })).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelector('.detail-scroll')).toBe(scroll);
+    expect(scroll.scrollTop).toBe(350);
+    expect(screen.getByRole('textbox', { name: 'Post HTML' })).toBe(editor);
 
-    post = { ...post, status, revision: 3 };
+    post = {
+      ...post,
+      status,
+      revision: 3,
+      revisions:
+        status === 'DRAFT'
+          ? [
+              {
+                ...post.revisions[0],
+                id: 'generated-revision',
+                version: 3,
+                html: '<b>New draft</b>',
+              },
+              ...post.revisions,
+            ]
+          : post.revisions,
+    };
     await act(async () => {
       await cache.invalidateQueries({ queryKey: ['post', 'post'] });
     });
@@ -214,6 +236,10 @@ describe('AI thinking feedback', () => {
     expect(await screen.findByRole('button', { name: 'Згенерувати знову' })).toBeEnabled();
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
     expect(container.querySelector('.ai-thinking-dots')).toBeNull();
+    expect(container.querySelector('.detail-scroll')).toBe(scroll);
+    expect(scroll.scrollTop).toBe(350);
+    expect(screen.getByRole('textbox', { name: 'Post HTML' })).toBe(editor);
+    expect(editor).toHaveValue(status === 'DRAFT' ? '<b>New draft</b>' : '<b>Draft</b>');
   });
 
   it('clears thinking feedback if starting generation fails', async () => {

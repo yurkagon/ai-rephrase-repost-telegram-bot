@@ -138,11 +138,7 @@ export function Workspace() {
         ) : selected.error ? (
           <ErrorNotice error={selected.error} />
         ) : selected.data ? (
-          <PostEditor
-            key={`${selected.data.id}:${selected.data.revision}:${selected.data.status}`}
-            post={selected.data}
-            back={() => move('')}
-          />
+          <PostEditor key={selected.data.id} post={selected.data} back={() => move('')} />
         ) : (
           <div className="empty selection-empty">
             <Send size={46} />
@@ -167,6 +163,7 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
   const originalHtml =
     post.media.find((media) => media.originalCaption.trim())?.originalCaption ?? post.originalHtml;
   const [html, setHtml] = useState(revision?.html ?? originalHtml);
+  const [draftId, setDraftId] = useState(revision?.id);
   const [options, setOptions] = useState<Options>(post.route.options);
   const [dirty, setDirty] = useState(false);
   const [confirmation, setConfirmation] = useState<'publish' | 'discard' | null>(null);
@@ -177,6 +174,12 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
     'PUBLICATION_UNKNOWN',
     'SKIPPED',
   ].includes(post.status);
+
+  if (draftId !== revision?.id) {
+    setDraftId(revision?.id);
+    setHtml(revision?.html ?? originalHtml);
+    setDirty(false);
+  }
 
   useEffect(() => {
     edits.dirty = dirty;
