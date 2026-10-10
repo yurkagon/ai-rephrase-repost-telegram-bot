@@ -873,6 +873,46 @@ fieldset {
 .hint {
   margin: 10px 0 24px;
 }
+
+.channel-identifier-hint {
+  margin-bottom: 8px;
+}
+
+.channel-id-help {
+  max-width: 70ch;
+  margin-bottom: 24px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.channel-id-help summary {
+  min-height: 42px;
+  padding: 8px 0;
+  color: var(--accent-dark);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.channel-id-help ol {
+  margin: 8px 0 16px;
+  padding-left: 20px;
+  list-style: decimal;
+}
+
+.channel-id-help li + li {
+  margin-top: 12px;
+}
+
+.channel-id-example {
+  margin-top: 6px;
+}
+
+.channel-id-example code {
+  color: #172b3a;
+  overflow-wrap: anywhere;
+}
+
 .channel-row {
   display: flex;
   align-items: center;

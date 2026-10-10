@@ -20,7 +20,14 @@ export class RewriteOptionsDto {
 }
 
 export class AddChannelDto {
-  @ApiProperty({ example: '@my_channel' }) @IsString() @MaxLength(100) identifier: string;
+  @ApiProperty({
+    example: '@my_channel',
+    description:
+      'Channel username with @ or numeric ID without a minus sign (1001234567890). Signed IDs are also accepted.',
+  })
+  @IsString()
+  @MaxLength(100)
+  identifier: string;
 }
 
 export class CreateRouteDto {

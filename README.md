@@ -54,7 +54,7 @@ Open the client at `http://localhost:3001`. API documentation: `http://localhost
 1. Register and sign in immediately.
 2. Open **Channels → Connect Telegram**, follow the bot link, and refresh the connection.
 3. Add the bot as an administrator to your source and destination channels. Grant permission to post in the destination.
-4. Add each channel by `@username`, or its numeric `-100…` ID for a private channel. The linked Telegram user must administrate both channels.
+4. Add each channel by `@username`, or its numeric ID without a minus sign (e.g. `1001234567890`) for a private channel. Signed IDs are also accepted. The linked Telegram user must administrate both channels.
 5. Create a route, choose the AI defaults, and publish a **new** test post in the source channel.
 6. Select it from Inbox, generate a draft, edit/save if needed, then confirm publication.
 

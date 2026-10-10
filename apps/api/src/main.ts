@@ -10,6 +10,7 @@ import { API_PREFIX } from '@/config/openapi';
 import { useClientApp } from '@/bootstrap/client-app';
 import { useSwagger } from '@/bootstrap/swagger';
 import { ExceptionsFilter } from '@/common/filters/exceptions.filter';
+import { Prisma } from '@generated/prisma/client';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -52,10 +53,18 @@ async function bootstrap() {
   new Logger('Bootstrap').log(`Listening on http://localhost:${port}`);
 }
 
-void bootstrap().catch(() => {
-  new Logger('Bootstrap').error(
-    'Application failed to start; check configuration and connections.',
-  );
+void bootstrap().catch((error: unknown) => {
+  const prismaError = error instanceof Prisma.PrismaClientKnownRequestError ? error : undefined;
+
+  new Logger('Bootstrap').error({
+    event: 'Application failed to start',
+    error: error instanceof Error ? error.name : 'UnknownError',
+    ...(prismaError ? { code: prismaError.code } : {}),
+    hint:
+      prismaError && ['P2021', 'P2022'].includes(prismaError.code)
+        ? 'Database schema is missing or outdated. Run pnpm db:deploy.'
+        : 'Check configuration and connections.',
+  });
   process.exitCode = 1;
   process.kill(process.pid, 'SIGTERM');
 });

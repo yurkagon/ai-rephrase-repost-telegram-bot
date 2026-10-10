@@ -112,10 +112,14 @@ export class ChannelsService implements OnModuleInit {
   }
 
   async add(ownerId: string, identifier: string) {
-    if (!/^(@[a-zA-Z0-9_]{5,}|-100\d+)$/.test(identifier.trim()))
+    identifier = identifier.trim();
+
+    if (!/^(@[a-zA-Z0-9_]{5,}|-?100\d+)$/.test(identifier))
       throw new BadRequestException('Enter a channel username or numeric ID');
 
-    const info = await this.checkRights(ownerId, identifier.trim());
+    const chatId =
+      identifier.startsWith('@') || identifier.startsWith('-') ? identifier : `-${identifier}`;
+    const info = await this.checkRights(ownerId, chatId);
     const existing = await this.db.channel.findUnique({ where: { chatId: info.chatId } });
 
     if (existing && existing.ownerId !== ownerId)

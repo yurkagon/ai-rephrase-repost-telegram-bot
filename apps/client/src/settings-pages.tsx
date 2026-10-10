@@ -96,7 +96,8 @@ export function ChannelsPage() {
           {t('identifier')}
           <input
             name="identifier"
-            placeholder="@channel_name"
+            aria-describedby="channel-identifier-hint"
+            placeholder="@channel_name / 1001234567890"
             required
             disabled={!user?.telegramId}
           />
@@ -106,7 +107,28 @@ export function ChannelsPage() {
           {t('addChannel')}
         </button>
       </form>
-      <p className="hint">{t('channelHint')}</p>
+      <p className="hint channel-identifier-hint" id="channel-identifier-hint">
+        {t('channelHint')}
+      </p>
+      <details className="channel-id-help">
+        <summary>{t('channelIdHelp')}</summary>
+        <ol>
+          <li>{t('channelIdCopyPost')}</li>
+          <li>
+            {t('channelIdFindNumber')}
+            <p className="channel-id-example">
+              <code>https://t.me/c/1234567890/42</code>
+            </p>
+          </li>
+          <li>
+            {t('channelIdCalculate')}
+            <p className="channel-id-example">
+              {t('channelIdExample')} <code>1001234567890</code>
+            </p>
+          </li>
+        </ol>
+        <p>{t('channelInviteHint')}</p>
+      </details>
       {channels.isLoading ? (
         <Loading />
       ) : channels.isError ? (
@@ -126,7 +148,7 @@ export function ChannelsPage() {
               <div>
                 <strong>{channel.title}</strong>
                 <small>
-                  {channel.username ? `@${channel.username}` : channel.chatId} ·{' '}
+                  {channel.username ? `@${channel.username}` : channel.chatId.replace(/^-/, '')} ·{' '}
                   {channel.canPublish ? t('target') : t('source')}
                 </small>
               </div>

@@ -28,7 +28,17 @@ const en = {
   connected: 'Telegram connected',
   addChannel: 'Add channel',
   identifier: 'Channel username or numeric ID',
-  channelHint: 'For a private channel, enter its numeric ID beginning with -100.',
+  channelHint:
+    'Public channel: @username. Private channel: ID without a minus sign, e.g. 1001234567890.',
+  channelIdHelp: 'How do I find a private channel ID?',
+  channelIdCopyPost:
+    'Open the channel in Telegram. Right-click or long-press any post and select “Copy link”. If the channel is empty, publish a post first.',
+  channelIdFindNumber: 'Find the number immediately after /c/ in the copied post link:',
+  channelIdCalculate:
+    'Add 1000000000000 to that number and enter the result in the field above. No minus sign is needed.',
+  channelIdExample: 'For the example above:',
+  channelInviteHint:
+    'Invite links such as t.me/+… do not contain the channel ID. Use a post link. The Telegram ID shown in the connection panel belongs to your account.',
   remove: 'Remove',
   source: 'Source channel',
   target: 'Publication channel',
@@ -154,7 +164,16 @@ const uk: typeof en = {
   connected: 'Telegram підключено',
   addChannel: 'Додати канал',
   identifier: 'Username або числовий ID каналу',
-  channelHint: 'Для приватного каналу введіть числовий ID, що починається з -100.',
+  channelHint: 'Публічний канал: @username. Приватний: ID без мінуса, наприклад 1001234567890.',
+  channelIdHelp: 'Як знайти ID приватного каналу?',
+  channelIdCopyPost:
+    'Відкрийте канал у Telegram. Натисніть правою кнопкою або затисніть будь-який допис і виберіть «Копіювати посилання». Якщо канал порожній, спочатку опублікуйте допис.',
+  channelIdFindNumber: 'Знайдіть число одразу після /c/ у скопійованому посиланні на допис:',
+  channelIdCalculate:
+    'Додайте до цього числа 1000000000000 і введіть результат у поле вище. Мінус не потрібен.',
+  channelIdExample: 'Для прикладу вище:',
+  channelInviteHint:
+    'Посилання-запрошення t.me/+… не містить ID каналу. Потрібне посилання на допис. Telegram ID у блоці підключення належить вашому акаунту.',
   remove: 'Видалити',
   source: 'Канал джерела',
   target: 'Канал публікації',
