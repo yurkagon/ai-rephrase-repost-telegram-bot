@@ -12,6 +12,7 @@ import { TelegramError } from 'telegraf';
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { RedisService } from '@/infra/redis/redis.service';
 import { TelegramService } from '@/telegram/telegram.service';
+import { mediaContentType } from '@/telegram/media-content-type';
 import { newToken, tokenHash } from '@/api/auth/auth.service';
 import { rewriteOptionsSchema } from '@/ai/ai.service';
 
@@ -180,9 +181,13 @@ export class ChannelsService implements OnModuleInit {
         signal: AbortSignal.timeout(15_000),
         redirect: 'error',
       });
-      const contentType = upstream.headers.get('content-type') ?? '';
+      const upstreamType = upstream.headers.get('content-type') ?? '';
 
-      if (!upstream.ok || !upstream.body || !/^image\/(jpeg|png|webp)(;|$)/.test(contentType)) {
+      if (
+        !upstream.ok ||
+        !upstream.body ||
+        !/^(image\/(jpeg|png|webp)|application\/octet-stream)(;|$)/i.test(upstreamType)
+      ) {
         await upstream.body?.cancel();
         throw new Error('Invalid channel photo');
       }
@@ -198,7 +203,12 @@ export class ChannelsService implements OnModuleInit {
         chunks.push(chunk);
       }
 
-      return { buffer: Buffer.concat(chunks), contentType };
+      const buffer = Buffer.concat(chunks);
+      const contentType = mediaContentType(buffer);
+
+      if (!contentType?.startsWith('image/')) throw new Error('Unsupported channel photo');
+
+      return { buffer, contentType };
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
 

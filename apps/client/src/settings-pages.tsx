@@ -338,29 +338,20 @@ export function MetricsPage() {
       <ErrorNotice error={result.error} />
       {result.data && (
         <dl className="metrics-table">
-          {(
-            [
-              'calls',
-              'failures',
-              'inputTokens',
-              'outputTokens',
-              'averageDurationMs',
-              'averageRating',
-            ] as const
-          ).map((key) => (
-            <div key={key}>
-              <dt>{t(key)}</dt>
-              <dd>
-                {result.data![key] == null
-                  ? t('noData')
-                  : key === 'averageDurationMs'
-                    ? `${(result.data![key]! / 1000).toFixed(1)} s`
-                    : key === 'averageRating'
-                      ? result.data![key]!.toFixed(1)
+          {(['calls', 'failures', 'inputTokens', 'outputTokens', 'averageDurationMs'] as const).map(
+            (key) => (
+              <div key={key}>
+                <dt>{t(key)}</dt>
+                <dd>
+                  {result.data![key] == null
+                    ? t('noData')
+                    : key === 'averageDurationMs'
+                      ? `${(result.data![key]! / 1000).toFixed(1)} s`
                       : result.data![key]!.toLocaleString()}
-              </dd>
-            </div>
-          ))}
+                </dd>
+              </div>
+            ),
+          )}
         </dl>
       )}
     </section>

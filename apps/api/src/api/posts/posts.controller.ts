@@ -17,14 +17,7 @@ import { pipeline } from 'node:stream/promises';
 import { Authorization, CurrentUser } from '@/common/decorators';
 
 import { PostsService } from './posts.service';
-import {
-  EditPostDto,
-  GenerateDto,
-  ListPostsDto,
-  RatingDto,
-  ResolveDto,
-  RevisionDto,
-} from './dto/posts.dto';
+import { EditPostDto, GenerateDto, ListPostsDto, ResolveDto, RevisionDto } from './dto/posts.dto';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -70,14 +63,6 @@ export class PostsController {
   @ApiOperation({ summary: 'Publish the confirmed saved revision' })
   publish(@CurrentUser('id') owner: string, @Param('id') id: string, @Body() dto: RevisionDto) {
     return this.posts.publish(owner, id, dto.revision);
-  }
-
-  @Post(':id/rating') rate(
-    @CurrentUser('id') owner: string,
-    @Param('id') id: string,
-    @Body() dto: RatingDto,
-  ) {
-    return this.posts.rate(owner, id, dto.rating);
   }
 
   @Post(':id/resolve')

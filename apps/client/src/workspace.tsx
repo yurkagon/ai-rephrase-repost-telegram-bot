@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Check, ChevronDown, Inbox, Send, Sparkles } from 'lucide-react';
 
 import { api, body } from './api';
-import type { Caption, Options, Post, Route } from './types';
+import type { Options, Post, Route } from './types';
 import {
   ChannelAvatar,
   ConfirmDialog,
@@ -103,10 +103,10 @@ export function Workspace() {
                   key={post.id}
                   onClick={() => move(post.id)}
                 >
-                  <ChannelAvatar channel={post.route.source} />
+                  <ChannelAvatar channel={post.route.target} />
                   <span className="post-row-copy">
                     <span className="post-row-heading">
-                      <strong>{post.route.source.title}</strong>
+                      <strong>{post.route.target.title}</strong>
                       <time>{new Date(post.createdAt).toLocaleDateString()}</time>
                     </span>
                     <span className="post-excerpt">
@@ -164,11 +164,9 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
   const { t } = useTranslation();
   const cache = useQueryClient();
   const revision = post.revisions[0];
-  const [html, setHtml] = useState(revision?.html ?? post.originalHtml);
-  const [captions, setCaptions] = useState<Caption[]>(
-    revision?.captions ??
-      post.media.map((m) => ({ messageId: m.messageId, html: m.originalCaption })),
-  );
+  const originalHtml =
+    post.media.find((media) => media.originalCaption.trim())?.originalCaption ?? post.originalHtml;
+  const [html, setHtml] = useState(revision?.html ?? originalHtml);
   const [options, setOptions] = useState<Options>(post.route.options);
   const [dirty, setDirty] = useState(false);
   const [confirmation, setConfirmation] = useState(false);
@@ -193,8 +191,11 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
 
   const invalidate = () => {
     setDirty(false);
-    void cache.invalidateQueries({ queryKey: ['post', post.id] });
-    void cache.invalidateQueries({ queryKey: ['posts'] });
+
+    return Promise.all([
+      cache.invalidateQueries({ queryKey: ['post', post.id] }),
+      cache.invalidateQueries({ queryKey: ['posts'] }),
+    ]);
   };
   const generate = useMutation({
     mutationFn: () =>
@@ -208,7 +209,14 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
     mutationFn: () =>
       api(`/posts/${post.id}`, {
         method: 'PATCH',
-        body: body({ revision: post.revision, html, captions }),
+        body: body({
+          revision: post.revision,
+          html,
+          captions: post.media.map((media, index) => ({
+            messageId: media.messageId,
+            html: index === 0 ? html : '',
+          })),
+        }),
       }),
     onSuccess: invalidate,
   });
@@ -220,26 +228,13 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
       invalidate();
     },
   });
-  const rate = useMutation({
-    mutationFn: (rating: number) =>
-      api(`/posts/${post.id}/rating`, { method: 'POST', body: body({ rating }) }),
-    onSuccess: invalidate,
-  });
   const resolve = useMutation({
     mutationFn: (published: boolean) =>
       api(`/posts/${post.id}/resolve`, { method: 'POST', body: body({ published }) }),
     onSuccess: invalidate,
   });
-  const changeCaption = (messageId: number, value: string) => {
-    setCaptions((current) =>
-      current.map((c) => (c.messageId === messageId ? { ...c, html: value } : c)),
-    );
-
-    if (messageId === post.media[0]?.messageId) setHtml(value);
-
-    setDirty(true);
-  };
   const working = generate.isPending || save.isPending || publish.isPending || resolve.isPending;
+  const generating = generate.isPending || post.status === 'GENERATING';
 
   return (
     <>
@@ -247,9 +242,9 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
         <button className="icon-button mobile-back" aria-label={t('inbox')} onClick={back}>
           <ArrowLeft size={20} />
         </button>
-        <ChannelAvatar channel={post.route.source} />
+        <ChannelAvatar channel={post.route.target} />
         <div>
-          <strong>{post.route.source.title}</strong>
+          <strong>{post.route.target.title}</strong>
           <small>
             {post.route.source.title} → {post.route.target.title}
           </small>
@@ -258,14 +253,7 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
       </header>
       <div className="detail-scroll">
         <ErrorNotice
-          error={
-            generate.error ??
-            save.error ??
-            publish.error ??
-            resolve.error ??
-            rate.error ??
-            post.error
-          }
+          error={generate.error ?? save.error ?? publish.error ?? resolve.error ?? post.error}
         />
         {post.status === 'PUBLICATION_UNKNOWN' && (
           <div className="unknown-state">
@@ -291,12 +279,9 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
           </div>
           <div className="message original-message">
             {post.media.map((media) => (
-              <div key={media.id}>
-                <MediaPreview postId={post.id} media={media} />
-                <Html html={media.originalCaption} />
-              </div>
+              <MediaPreview key={media.id} postId={post.id} media={media} />
             ))}
-            {post.media.length === 0 && <Html html={post.originalHtml} />}
+            <Html html={originalHtml} />
           </div>
         </div>
         {!['PUBLISHED', 'PUBLICATION_UNKNOWN'].includes(post.status) && (
@@ -304,65 +289,54 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
             <OptionsForm value={options} onChange={setOptions} disabled={locked || working} />
             <button
               className="ai-button"
+              aria-busy={generating}
               disabled={locked || working}
               onClick={() => {
                 if (!dirty || window.confirm(t('discard'))) generate.mutate();
               }}
             >
               <Sparkles size={17} />
-              {t(revision ? 'regenerate' : 'generate')}
+              {generating ? (
+                <>
+                  {t('thinking')}
+                  <span className="ai-thinking-dots" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                </>
+              ) : (
+                t(revision ? 'regenerate' : 'generate')
+              )}
             </button>
+            <span role="status" className="sr-only">
+              {generating ? t('thinking') : ''}
+            </span>
           </div>
         )}
-        <div className="draft-section">
+        <div className="draft-section" aria-busy={generating}>
           <Suspense fallback={<Loading />}>
             <div className="section-label">
               <h2>{t('draft')}</h2>
               {dirty && <span>{t('unsaved')}</span>}
             </div>
-            {post.media.length ? (
-              captions.map((caption, index) => (
-                <div className="caption-editor" key={caption.messageId}>
-                  <small>
-                    {index + 1} / {captions.length}
-                  </small>
-                  <RichEditor
-                    html={caption.html}
-                    onChange={(value) => changeCaption(caption.messageId, value)}
-                    disabled={locked || working}
-                  />
-                </div>
-              ))
-            ) : (
-              <RichEditor
-                html={html}
-                onChange={(value) => {
-                  setHtml(value);
-                  setDirty(true);
-                }}
-                disabled={locked || working}
-              />
-            )}
+            <RichEditor
+              html={html}
+              onChange={(value) => {
+                setHtml(value);
+                setDirty(true);
+              }}
+              disabled={locked || working}
+            />
             <div className="section-label">
               <h2>{t('preview')}</h2>
             </div>
             <div className="message preview-message">
               <strong className="preview-channel">{post.route.target.title}</strong>
-              {post.media.length ? (
-                post.media.map((media) => (
-                  <div key={media.id}>
-                    <MediaPreview postId={post.id} media={media} />
-                    <Html
-                      html={
-                        captions.find((caption) => caption.messageId === media.messageId)?.html ??
-                        ''
-                      }
-                    />
-                  </div>
-                ))
-              ) : (
-                <Html html={html} />
-              )}
+              {post.media.map((media) => (
+                <MediaPreview key={media.id} postId={post.id} media={media} />
+              ))}
+              <Html html={html} />
               <small className="message-time">
                 {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 <Check size={14} />
@@ -382,28 +356,9 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
                 </strong>
                 <small>{new Date(item.createdAt).toLocaleString()}</small>
                 <Html html={item.html} />
-                {item.captions.slice(1).map((c) => (
-                  <Html key={c.messageId} html={c.html} />
-                ))}
               </div>
             ))}
           </details>
-        )}
-        {post.revisions.some((r) => r.origin === 'ai') && (
-          <div className="rating">
-            <span>{t('rate')}</span>
-            {[1, 2, 3, 4, 5].map((rating) => (
-              <button
-                className={rating === post.rating ? 'chosen' : ''}
-                key={rating}
-                disabled={rate.isPending}
-                aria-label={`${t('rate')}: ${rating}`}
-                onClick={() => rate.mutate(rating)}
-              >
-                {rating}
-              </button>
-            ))}
-          </div>
         )}
       </div>
       {!['PUBLISHED', 'PUBLICATION_UNKNOWN'].includes(post.status) && (

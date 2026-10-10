@@ -528,7 +528,6 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
     expect(await db.aiRun.count({ where: { postId: post.id } })).toBe(42);
     expect(Object.keys(await posts.metrics(ownerId)).sort()).toEqual([
       'averageDurationMs',
-      'averageRating',
       'calls',
       'failures',
       'inputTokens',
@@ -692,6 +691,53 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
     expect(await db.postRevision.count({ where: { postId: post.id } })).toBe(0);
     expect(sends.sendMessage).not.toHaveBeenCalled();
   });
+  it('does not send a publication if shutdown happens while checking channel rights', async () => {
+    const post = await ingestAndFind(message(708));
+
+    await posts.edit(ownerId, post.id, { revision: 0, html: 'Saved', captions: [] });
+
+    const operation = await posts.publish(ownerId, post.id, 1);
+    const channels = app.get(ChannelsService);
+    const stopping = new PostsProcessor(
+      db,
+      app.get(AiService),
+      bot as unknown as TelegramService,
+      channels,
+    );
+    let started!: () => void;
+    let finish!: (rights: Awaited<ReturnType<ChannelsService['checkRights']>>) => void;
+    const checking = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const checkRights = jest.spyOn(channels, 'checkRights').mockImplementationOnce(() => {
+      started();
+
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    });
+
+    try {
+      const running = stopping.process({ data: { id: operation.id } } as Parameters<
+        PostsProcessor['process']
+      >[0]);
+
+      await checking;
+      stopping.onModuleDestroy();
+      finish({ chatId: '-100222', title: 'Target', username: null, canPublish: true });
+      await running;
+
+      expect((await db.post.findUniqueOrThrow({ where: { id: post.id } })).status).toBe('FAILED');
+      expect((await db.operation.findUniqueOrThrow({ where: { id: operation.id } })).status).toBe(
+        'FAILED',
+      );
+
+      for (const send of Object.values(sends)) expect(send).not.toHaveBeenCalled();
+    } finally {
+      checkRights.mockRestore();
+    }
+  });
+
   it('changes the password without server-side token sessions', async () => {
     const email = `password-${randomUUID()}@example.com`;
     const login = await register(email);

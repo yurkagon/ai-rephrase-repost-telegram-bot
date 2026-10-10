@@ -11,7 +11,7 @@ Built with NestJS, React, PostgreSQL, Prisma, Redis, BullMQ, LangChain and OpenA
 - Administrator-verified channels and dynamic source → destination routes, with cycle prevention.
 - Persistent inbox for text, photos, videos and albums; deduplication by route and Telegram message/group IDs.
 - On-demand exact translation or editorial rewriting with language, tone, length and source-signature settings.
-- Telegram-compatible rich text editor, source/preview, version history and AI feedback.
+- Telegram-compatible rich text editor, source/preview and version history.
 - Explicit confirmation before publishing; no automatic publication or fallback to the original after AI failure.
 - Durable operation records and a Redis-backed queue, token/latency/error metrics and a repository-owned eval suite.
 

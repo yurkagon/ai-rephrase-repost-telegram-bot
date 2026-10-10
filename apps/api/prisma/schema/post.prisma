@@ -25,7 +25,6 @@ model Post {
   publishedIds   Int[]
   error          String?
   failureStage   String?
-  rating         Int?
   lastReceivedAt DateTime       @default(now())
   createdAt      DateTime       @default(now())
 

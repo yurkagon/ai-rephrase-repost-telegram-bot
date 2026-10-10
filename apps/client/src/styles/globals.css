@@ -645,6 +645,39 @@ fieldset {
 .ai-button:hover {
   background: #cce4f5;
 }
+.ai-button[aria-busy='true'] {
+  opacity: 1;
+}
+.ai-thinking-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.ai-thinking-dots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: ai-thinking 1.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+.ai-thinking-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.ai-thinking-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes ai-thinking {
+  0%,
+  70%,
+  100% {
+    opacity: 0.4;
+    transform: translateY(0);
+  }
+  35% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
 .rich-editor {
   background: #fff;
   border: 1px solid #c8d8e4;
@@ -731,24 +764,6 @@ fieldset {
   display: block;
   margin: 7px 0;
 }
-.rating {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  font-size: 13px;
-  color: var(--muted);
-  padding-bottom: 15px;
-}
-.rating button {
-  background: #fff;
-  padding: 8px 12px;
-  border-radius: 6px;
-}
-.rating .chosen {
-  background: var(--accent);
-  color: #fff;
-}
 .empty {
   display: flex;
   flex-direction: column;
@@ -781,10 +796,6 @@ fieldset {
 }
 .mobile-back {
   display: none;
-}
-.caption-editor small {
-  display: block;
-  margin-bottom: 7px;
 }
 .unknown-state {
   background: #fff6e7;
@@ -1138,6 +1149,11 @@ fieldset {
 @media (prefers-reduced-motion: reduce) {
   .spin {
     animation: none;
+  }
+  .ai-thinking-dots span {
+    animation: none;
+    transform: none;
+    opacity: 1;
   }
 }
 

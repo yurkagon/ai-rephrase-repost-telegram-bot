@@ -192,6 +192,7 @@ describe('channel avatars', () => {
     {} as RedisService,
   );
   const privateUrl = new URL('https://api.telegram.org/file/botprivate-token/photo.jpg');
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
   let fetchMock: jest.SpiedFunction<typeof fetch>;
 
   beforeEach(() => {
@@ -205,16 +206,14 @@ describe('channel avatars', () => {
   afterEach(() => jest.restoreAllMocks());
 
   it('returns the current small photo only after verifying ownership', async () => {
-    fetchMock.mockResolvedValue(
-      new Response('photo', { headers: { 'Content-Type': 'image/jpeg' } }),
-    );
+    fetchMock.mockResolvedValue(new Response(jpeg, { headers: { 'Content-Type': 'image/jpeg' } }));
 
     const result = await service.avatar('owner', 'channel');
 
     expect(findFirst).toHaveBeenCalledWith({ where: { id: 'channel', ownerId: 'owner' } });
     expect(getChat).toHaveBeenCalledWith('-100123');
     expect(getFileLink).toHaveBeenCalledWith('small-photo');
-    expect(result).toEqual({ buffer: Buffer.from('photo'), contentType: 'image/jpeg' });
+    expect(result).toEqual({ buffer: jpeg, contentType: 'image/jpeg' });
     expect(fetchMock).toHaveBeenCalledWith(privateUrl, {
       signal: expect.any(AbortSignal) as unknown,
       redirect: 'error',
@@ -228,6 +227,34 @@ describe('channel avatars', () => {
     expect(getChat).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it.each([
+    [jpeg, 'image/jpeg'],
+    [Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), 'image/png'],
+    [Buffer.from('RIFF0000WEBP'), 'image/webp'],
+  ])('recognizes a Telegram binary download as %s', async (image, contentType) => {
+    fetchMock.mockResolvedValue(
+      new Response(image, { headers: { 'Content-Type': 'application/octet-stream' } }),
+    );
+
+    await expect(service.avatar('owner', 'channel')).resolves.toEqual({
+      buffer: image,
+      contentType,
+    });
+  });
+
+  it.each(['application/octet-stream', 'image/jpeg'])(
+    'rejects non-image bytes even when declared as %s',
+    async (contentType) => {
+      fetchMock.mockResolvedValue(
+        new Response('<svg/>', { headers: { 'Content-Type': contentType } }),
+      );
+
+      await expect(service.avatar('owner', 'channel')).rejects.toThrow(
+        'Channel photo is unavailable',
+      );
+    },
+  );
 
   it('reports a missing photo without downloading', async () => {
     getChat.mockResolvedValue({ type: 'channel' });

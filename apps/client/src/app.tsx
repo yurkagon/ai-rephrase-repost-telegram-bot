@@ -61,9 +61,15 @@ function Application() {
   return (
     <div className="app-shell">
       <aside className="navigation">
-        <div className="nav-brand">
+        <button
+          type="button"
+          className="nav-brand"
+          aria-label={t('inbox')}
+          title={t('inbox')}
+          onClick={() => move('/workspace')}
+        >
           <Brand />
-        </div>
+        </button>
         <nav aria-label={t('product')}>
           {navigation.map(({ path, label, icon: Icon }) => (
             <button

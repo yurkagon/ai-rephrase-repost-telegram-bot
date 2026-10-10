@@ -144,7 +144,7 @@ The palette uses a clear blue accent, cool light neutrals, and restrained semant
 
 ### Primary
 
-- **Action Blue** (`accent`): filled publishing and form actions, chosen rating, caret, checkbox, and brand mark. The implemented action color replaces the earlier documented `#168acd` to give white button text sufficient contrast.
+- **Action Blue** (`accent`): filled publishing and form actions, caret, checkbox, and brand mark. The implemented action color replaces the earlier documented `#168acd` to give white button text sufficient contrast.
 - **Deep Blue** (`accent-dark`): primary hover, links, secondary actions, selected navigation, and target-channel preview text.
 - **Focus Blue** (`focus`): the distinct keyboard outline and inset editor focus treatment; it remains brighter than the action fill.
 - **Soft Blue** (`ai-action`, `ai-action-hover`, `preview`, `nav-selected`, `row-selected`): AI actions, outgoing preview, navigation, and inbox selection. Their different tints identify context without adding another action hue.
@@ -179,7 +179,7 @@ The authentication story uses a 42px headline at 1.14 line-height; it is hidden 
 
 ## Layout
 
-The desktop shell fills `100dvh`: an 86px navigation rail, a 340px inbox, and a flexible detail pane. A white 75px detail header and white action footer frame the independently scrolling canvas. Detail content is capped at 850px and normally padded 24px by 32px. Source, AI options, draft, preview, versions, and rating follow a vertical reading sequence rather than competing columns.
+The desktop shell fills `100dvh`: an 86px navigation rail, a 340px inbox, and a flexible detail pane. A white 75px detail header and white action footer frame the independently scrolling canvas. Detail content is capped at 850px and normally padded 24px by 32px. Source, AI options, draft, preview, and versions follow a vertical reading sequence rather than competing columns.
 
 At 1100px and below, the inbox narrows to 290px, detail padding becomes 20px, and four AI option columns become two. At 760px and below, a 74px bottom navigation replaces the rail; the inbox and selected detail become sequential full-width panes with an explicit back control. Mobile detail padding is 20px by 14px, message padding is 15px, and the publication footer remains outside the detail scroll.
 
@@ -229,7 +229,7 @@ The editor offers SVG formatting controls with accessible labels, an inset focus
 
 ### Feedback and metrics
 
-Errors use an alert region and a red-tinted notice. Loading uses a status region. Empty states pair concise explanation with a next action where available. Metrics show API-provided counts, duration, and rating; absent averages read as no data. Preserve these states without substituting decorative charts or invented activity.
+Errors use an alert region and a red-tinted notice. Loading uses a status region. Empty states pair concise explanation with a next action where available. Metrics show API-provided counts, token usage, and duration; absent values read as no data. Preserve these states without substituting decorative charts or invented activity.
 
 ## Do's and Don'ts
 

@@ -21,6 +21,7 @@ import { TelegramService } from '@/telegram/telegram.service';
 import { rewriteOptionsSchema } from '@/ai/ai.service';
 import { ChannelsService } from '@/api/channels/channels.service';
 import { telegramHtml, messageToHtml } from '@/telegram/telegram-html';
+import { mediaContentType } from '@/telegram/media-content-type';
 
 import { EditPostDto, GenerateDto } from './dto/posts.dto';
 
@@ -248,25 +249,80 @@ export class PostsService implements OnModuleInit, OnModuleDestroy, OnApplicatio
 
       if (!upstream.ok || !body) throw new Error('Media unavailable');
 
-      const contentType = upstream.headers.get('content-type') ?? '';
+      const upstreamType = upstream.headers.get('content-type') ?? '';
 
-      if (!/^(image\/(jpeg|png|webp)|video\/mp4)(;|$)/.test(contentType)) {
+      if (
+        !/^(image\/(jpeg|png|webp)|video\/mp4|application\/octet-stream)(;|$)/i.test(upstreamType)
+      ) {
+        await body.cancel();
         throw new Error('Unsupported preview');
       }
 
-      const bounded = async function* () {
-        let bytes = 0;
+      const reader = body.getReader();
+      const prefix: Uint8Array[] = [];
+      let bytes = 0;
 
-        for await (const chunk of body) {
-          bytes += chunk.length;
+      // A file signature can be split across network chunks.
+      while (bytes < 12) {
+        const { value, done } = await reader.read();
 
-          if (bytes > MAX_MEDIA_PREVIEW_BYTES) throw new Error('Preview limit exceeded');
+        if (done) break;
 
-          yield chunk;
+        bytes += value.length;
+
+        if (bytes > MAX_MEDIA_PREVIEW_BYTES) {
+          await reader.cancel();
+          throw new Error('Preview limit exceeded');
         }
-      };
 
-      return { stream: Readable.from(bounded()), contentType };
+        prefix.push(value);
+      }
+
+      const contentType = mediaContentType(Buffer.concat(prefix));
+
+      if (
+        !contentType ||
+        (media.type === 'photo' && !contentType.startsWith('image/')) ||
+        (media.type === 'video' && contentType !== 'video/mp4')
+      ) {
+        await reader.cancel();
+        throw new Error('Unsupported preview');
+      }
+
+      const stream = new Readable({
+        read() {
+          void reader.read().then(
+            ({ value, done }) => {
+              if (done) {
+                this.push(null);
+                return;
+              }
+
+              bytes += value.length;
+
+              if (bytes > MAX_MEDIA_PREVIEW_BYTES) {
+                this.destroy(new Error('Preview limit exceeded'));
+                return;
+              }
+
+              this.push(value);
+            },
+            (error: unknown) => {
+              this.destroy(error instanceof Error ? error : new Error('Media download failed'));
+            },
+          );
+        },
+        destroy(error, callback) {
+          void reader.cancel().then(
+            () => callback(error),
+            () => callback(error),
+          );
+        },
+      });
+
+      for (const chunk of prefix) stream.push(chunk);
+
+      return { stream, contentType };
     } catch {
       throw new ServiceUnavailableException(
         'Media preview is unavailable; the saved Telegram file can still be published',
@@ -403,12 +459,6 @@ export class PostsService implements OnModuleInit, OnModuleDestroy, OnApplicatio
     return operation;
   }
 
-  async rate(ownerId: string, id: string, rating: number) {
-    await this.owned(ownerId, id);
-
-    return this.db.post.update({ where: { id }, data: { rating } });
-  }
-
   async resolve(ownerId: string, id: string, published: boolean) {
     const post = await this.owned(ownerId, id);
 
@@ -445,15 +495,12 @@ export class PostsService implements OnModuleInit, OnModuleDestroy, OnApplicatio
   }
 
   async metrics(ownerId: string) {
-    const [runs, ratings] = await Promise.all([
-      this.db.aiRun.aggregate({
-        where: { post: { route: { ownerId } } },
-        _count: true,
-        _sum: { inputTokens: true, outputTokens: true },
-        _avg: { durationMs: true },
-      }),
-      this.db.post.aggregate({ where: { route: { ownerId } }, _avg: { rating: true } }),
-    ]);
+    const runs = await this.db.aiRun.aggregate({
+      where: { post: { route: { ownerId } } },
+      _count: true,
+      _sum: { inputTokens: true, outputTokens: true },
+      _avg: { durationMs: true },
+    });
     const failures = await this.db.aiRun.count({
       where: { post: { route: { ownerId } }, outcome: { not: 'success' } },
     });
@@ -463,7 +510,6 @@ export class PostsService implements OnModuleInit, OnModuleDestroy, OnApplicatio
       inputTokens: runs._sum.inputTokens,
       outputTokens: runs._sum.outputTokens,
       averageDurationMs: runs._avg.durationMs,
-      averageRating: ratings._avg.rating,
       failures,
     };
   }

@@ -8,7 +8,6 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  Max,
   MaxLength,
   Min,
   ValidateNested,
@@ -37,10 +36,6 @@ export class EditPostDto extends RevisionDto {
   @ValidateNested({ each: true })
   @Type(() => CaptionDto)
   captions: CaptionDto[];
-}
-
-export class RatingDto {
-  @IsInt() @Min(1) @Max(5) rating: number;
 }
 
 export class ResolveDto {

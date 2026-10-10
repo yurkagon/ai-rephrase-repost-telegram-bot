@@ -70,7 +70,6 @@ export type Post = {
   status: string;
   error: string | null;
   failureStage: string | null;
-  rating: number | null;
   publishedIds: number[];
   createdAt: string;
 };
@@ -81,5 +80,4 @@ export type Metrics = {
   inputTokens: number | null;
   outputTokens: number | null;
   averageDurationMs: number | null;
-  averageRating: number | null;
 };

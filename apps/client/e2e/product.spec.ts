@@ -52,7 +52,7 @@ test('new account connects channels, reviews an AI draft and publishes it', asyn
   await expect(page.getByText('Daily editorial', { exact: true })).toBeVisible();
   await request.post('http://127.0.0.1:3088/__test/ingest');
   await page.goto('/workspace');
-  await page.getByRole('button', { name: /Tech Notes.*Новий/ }).click();
+  await page.getByRole('button', { name: /Daily Digest.*Новий/ }).click();
   await page.getByRole('button', { name: 'Створити AI-чернетку' }).click();
   await expect(page.getByText('Готовий до перегляду', { exact: true }).first()).toBeVisible({
     timeout: 15000,
@@ -107,9 +107,11 @@ test('new account connects channels, reviews an AI draft and publishes it', asyn
   });
   await request.post('http://127.0.0.1:3088/__test/album');
   await page.goto('/workspace');
-  await page.getByRole('button', { name: /Tech Notes.*New/ }).click();
+  await page.getByRole('button', { name: /Daily Digest.*New/ }).click();
   await expect(page.locator('.preview-message img.post-media')).toHaveCount(2);
   await expect(page.locator('.original-message img.post-media')).toHaveCount(2);
+  await expect(page.locator('.rich-editor')).toHaveCount(1);
+  await expect(page.locator('.preview-message .telegram-text')).toHaveCount(1);
   expect(mediaRequests.size).toBe(2);
   await page
     .getByRole('heading', { name: 'Telegram preview', exact: true })
