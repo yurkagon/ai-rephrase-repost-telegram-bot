@@ -5,7 +5,7 @@ import { LoaderCircle, Send } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 import { mediaBlob } from './api';
-import type { Media, Options } from './types';
+import type { Channel, Media, Options } from './types';
 
 export function LanguageSwitch() {
   const { i18n, t } = useTranslation();
@@ -37,9 +37,12 @@ export function Brand() {
 }
 
 export function ErrorNotice({ error }: { error: unknown }) {
+  const { t } = useTranslation();
+  const message = error instanceof Error ? error.message : String(error);
+
   return error ? (
     <div className="error-notice" role="alert">
-      {error instanceof Error ? error.message : String(error)}
+      {t(message, { defaultValue: message })}
     </div>
   ) : null;
 }
@@ -138,6 +141,44 @@ export function OptionsForm({
 export const RichEditor = lazy(() =>
   import('./rich-editor').then((module) => ({ default: module.RichEditor })),
 );
+
+export function ChannelAvatar({ channel }: { channel: Channel }) {
+  const image = useRef<HTMLImageElement>(null);
+  const result = useQuery({
+    queryKey: ['channel-avatar', channel.id],
+    queryFn: ({ signal }) => mediaBlob(`/channels/${channel.id}/avatar`, signal),
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (!result.data || !image.current) return;
+
+    const url = URL.createObjectURL(result.data);
+
+    image.current.src = url;
+
+    return () => URL.revokeObjectURL(url);
+  }, [result.data]);
+
+  return (
+    <span className="channel-avatar" aria-hidden="true">
+      {channel.title.slice(0, 1)}
+      {result.data && (
+        <img
+          ref={image}
+          alt=""
+          onLoad={(event) => {
+            event.currentTarget.hidden = false;
+          }}
+          onError={(event) => {
+            event.currentTarget.hidden = true;
+          }}
+        />
+      )}
+    </span>
+  );
+}
 
 export function MediaPreview({ postId, media }: { postId: string; media: Media }) {
   const { t } = useTranslation();

@@ -1,12 +1,125 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { Html, OptionsForm } from './components';
+import * as api from './api';
+import { ChannelAvatar, ErrorNotice, Html, OptionsForm } from './components';
 import { RichEditor } from './rich-editor';
 import { defaults } from './types';
 
-import './i18n';
+import i18n from './i18n';
+
+describe('channel avatars', () => {
+  const channel = {
+    id: 'channel',
+    title: 'Tech news',
+    chatId: '-100123',
+    username: null,
+    canPublish: true,
+  };
+  const createUrl = vi.fn(() => 'blob:channel-photo');
+  const revokeUrl = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal(
+      'URL',
+      class extends URL {
+        static createObjectURL = createUrl;
+        static revokeObjectURL = revokeUrl;
+      },
+    );
+    createUrl.mockClear();
+    revokeUrl.mockClear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  function renderAvatar() {
+    return render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { gcTime: 0 } } })}>
+        <ChannelAvatar channel={channel} />
+      </QueryClientProvider>,
+    );
+  }
+
+  it('loads an authenticated blob and revokes its URL on unmount', async () => {
+    const load = vi.spyOn(api, 'mediaBlob').mockResolvedValue(new Blob(['photo']));
+    const { container, unmount } = renderAvatar();
+
+    await waitFor(() =>
+      expect(container.querySelector('img')).toHaveAttribute('src', 'blob:channel-photo'),
+    );
+    expect(load).toHaveBeenCalledWith('/channels/channel/avatar', expect.any(AbortSignal));
+    expect(container.querySelector('img')).toHaveAttribute('alt', '');
+
+    unmount();
+
+    expect(revokeUrl).toHaveBeenCalledWith('blob:channel-photo');
+  });
+
+  it('keeps the initial when there is no photo or downloading fails', async () => {
+    const load = vi.spyOn(api, 'mediaBlob').mockRejectedValue(new Error('Channel has no photo'));
+    const { container } = renderAvatar();
+
+    await waitFor(() => expect(load).toHaveBeenCalledOnce());
+    expect(container.querySelector('.channel-avatar')).toHaveTextContent('T');
+    expect(container.querySelector('img')).toBeNull();
+  });
+
+  it('falls back to the initial if the browser cannot decode the photo', async () => {
+    vi.spyOn(api, 'mediaBlob').mockResolvedValue(new Blob(['invalid photo']));
+    const { container } = renderAvatar();
+
+    await waitFor(() =>
+      expect(container.querySelector('img')).toHaveAttribute('src', 'blob:channel-photo'),
+    );
+
+    fireEvent.error(container.querySelector('img')!);
+
+    expect(container.querySelector('img')).toHaveAttribute('hidden');
+    expect(container.querySelector('.channel-avatar')).toHaveTextContent('T');
+  });
+});
+
+describe('channel access errors', () => {
+  it('translates the recovery instruction and preserves unknown errors', async () => {
+    const originalLanguage = i18n.language;
+
+    try {
+      await i18n.changeLanguage('uk');
+
+      const { rerender } = render(
+        <ErrorNotice
+          error={
+            new Error(
+              'Channel unavailable. Check the username or ID and add the bot as a channel administrator, then try again.',
+            )
+          }
+        />,
+      );
+
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Канал недоступний. Перевірте username або ID та додайте бота адміністратором',
+      );
+
+      await i18n.changeLanguage('en');
+
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Check the username or ID and add the bot',
+      );
+
+      rerender(<ErrorNotice error={new Error('Connection failed')} />);
+
+      expect(screen.getByRole('alert')).toHaveTextContent('Connection failed');
+    } finally {
+      await i18n.changeLanguage(originalLanguage);
+    }
+  });
+});
 
 describe('editor boundaries', () => {
   it('sanitizes a hostile preview without losing safe formatting', () => {

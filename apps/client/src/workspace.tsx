@@ -7,6 +7,7 @@ import { ArrowLeft, Check, ChevronDown, Inbox, Send, Sparkles } from 'lucide-rea
 import { api, body } from './api';
 import type { Caption, Options, Post, Route } from './types';
 import {
+  ChannelAvatar,
   ConfirmDialog,
   ErrorNotice,
   Html,
@@ -102,7 +103,7 @@ export function Workspace() {
                   key={post.id}
                   onClick={() => move(post.id)}
                 >
-                  <span className="channel-avatar">{post.route.source.title.slice(0, 1)}</span>
+                  <ChannelAvatar channel={post.route.source} />
                   <span className="post-row-copy">
                     <span className="post-row-heading">
                       <strong>{post.route.source.title}</strong>
@@ -246,7 +247,7 @@ function PostEditor({ post, back }: { post: Post; back: () => void }) {
         <button className="icon-button mobile-back" aria-label={t('inbox')} onClick={back}>
           <ArrowLeft size={20} />
         </button>
-        <span className="channel-avatar">{post.route.source.title.slice(0, 1)}</span>
+        <ChannelAvatar channel={post.route.source} />
         <div>
           <strong>{post.route.source.title}</strong>
           <small>

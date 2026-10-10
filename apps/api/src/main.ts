@@ -19,7 +19,9 @@ async function bootstrap() {
   const port = config.getOrThrow('PORT', { infer: true });
 
   app.enableShutdownHooks();
-  app.use(helmet());
+  app.use(
+    helmet({ contentSecurityPolicy: { directives: { imgSrc: ["'self'", 'data:', 'blob:'] } } }),
+  );
 
   if (config.get('NODE_ENV', { infer: true }) === 'production') app.set('trust proxy', 1);
 

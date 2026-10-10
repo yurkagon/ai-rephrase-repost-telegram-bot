@@ -1,5 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Header,
+  Param,
+  Patch,
+  Post,
+  StreamableFile,
+} from '@nestjs/common';
+import { ApiOperation, ApiProduces, ApiTags } from '@nestjs/swagger';
 
 import { Authorization, CurrentUser } from '@/common/decorators';
 
@@ -26,6 +36,16 @@ export class ChannelsController {
 
   @Delete(':id') remove(@CurrentUser('id') user: string, @Param('id') id: string) {
     return this.channels.remove(user, id);
+  }
+
+  @Get(':id/avatar')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiProduces('image/jpeg', 'image/png', 'image/webp')
+  @ApiOperation({ summary: 'Get the owned channel’s current Telegram photo' })
+  async avatar(@CurrentUser('id') owner: string, @Param('id') id: string) {
+    const { buffer, contentType } = await this.channels.avatar(owner, id);
+
+    return new StreamableFile(buffer, { type: contentType });
   }
 
   @Get('routes') routes(@CurrentUser('id') user: string) {

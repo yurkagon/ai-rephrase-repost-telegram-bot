@@ -6,7 +6,7 @@ import { CheckCircle2, ExternalLink, Plus, Radio, Trash2 } from 'lucide-react';
 
 import { api, body, updateUser, logout, useSession } from './api';
 import { defaults, type Channel, type Metrics, type Options, type Route, type User } from './types';
-import { ErrorNotice, Loading, OptionsForm, LanguageSwitch } from './components';
+import { ChannelAvatar, ErrorNotice, Loading, OptionsForm, LanguageSwitch } from './components';
 
 export function ChannelsPage() {
   const { t } = useTranslation();
@@ -96,7 +96,7 @@ export function ChannelsPage() {
           {t('identifier')}
           <input
             name="identifier"
-            aria-describedby="channel-identifier-hint"
+            aria-describedby="channel-identifier-hint channel-bot-hint"
             placeholder="@channel_name / 1001234567890"
             required
             disabled={!user?.telegramId}
@@ -109,6 +109,9 @@ export function ChannelsPage() {
       </form>
       <p className="hint channel-identifier-hint" id="channel-identifier-hint">
         {t('channelHint')}
+      </p>
+      <p className="hint" id="channel-bot-hint">
+        {t('channelBotHint')}
       </p>
       <details className="channel-id-help">
         <summary>{t('channelIdHelp')}</summary>
@@ -144,7 +147,7 @@ export function ChannelsPage() {
         <div className="channel-list">
           {channels.data?.map((channel) => (
             <div className="channel-row" key={channel.id}>
-              <span className="channel-avatar">{channel.title.slice(0, 1)}</span>
+              <ChannelAvatar channel={channel} />
               <div>
                 <strong>{channel.title}</strong>
                 <small>

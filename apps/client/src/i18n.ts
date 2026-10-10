@@ -30,6 +30,16 @@ const en = {
   identifier: 'Channel username or numeric ID',
   channelHint:
     'Public channel: @username. Private channel: ID without a minus sign, e.g. 1001234567890.',
+  channelBotHint:
+    'Before adding a channel, open its settings in Telegram → Administrators and add the platform bot. For a publication channel, also allow posting messages.',
+  'Channel unavailable. Check the username or ID and add the bot as a channel administrator, then try again.':
+    'Channel unavailable. Check the username or ID and add the bot as a channel administrator, then try again.',
+  'Add the bot as channel administrator':
+    'Add the bot as a channel administrator in Telegram, then try again.',
+  'Channel administrator rights required':
+    'Your linked Telegram account must be a channel administrator.',
+  'Bot needs permission to publish':
+    'Allow the bot to post messages in the publication channel’s administrator settings.',
   channelIdHelp: 'How do I find a private channel ID?',
   channelIdCopyPost:
     'Open the channel in Telegram. Right-click or long-press any post and select “Copy link”. If the channel is empty, publish a post first.',
@@ -165,6 +175,16 @@ const uk: typeof en = {
   addChannel: 'Додати канал',
   identifier: 'Username або числовий ID каналу',
   channelHint: 'Публічний канал: @username. Приватний: ID без мінуса, наприклад 1001234567890.',
+  channelBotHint:
+    'Перед додаванням каналу відкрийте його налаштування в Telegram → Адміністратори та додайте бота платформи. Для каналу публікації також дозвольте надсилання дописів.',
+  'Channel unavailable. Check the username or ID and add the bot as a channel administrator, then try again.':
+    'Канал недоступний. Перевірте username або ID та додайте бота адміністратором каналу, потім спробуйте ще раз.',
+  'Add the bot as channel administrator':
+    'Додайте бота адміністратором каналу в Telegram, потім спробуйте ще раз.',
+  'Channel administrator rights required':
+    'Ваш прив’язаний Telegram-акаунт має бути адміністратором каналу.',
+  'Bot needs permission to publish':
+    'У налаштуваннях адміністратора каналу публікації дозвольте боту надсилати дописи.',
   channelIdHelp: 'Як знайти ID приватного каналу?',
   channelIdCopyPost:
     'Відкрийте канал у Telegram. Натисніть правою кнопкою або затисніть будь-який допис і виберіть «Копіювати посилання». Якщо канал порожній, спочатку опублікуйте допис.',

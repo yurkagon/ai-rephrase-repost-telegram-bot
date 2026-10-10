@@ -5,7 +5,9 @@ import {
   Injectable,
   NotFoundException,
   OnModuleInit,
+  ServiceUnavailableException,
 } from '@nestjs/common';
+import { TelegramError } from 'telegraf';
 
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { RedisService } from '@/infra/redis/redis.service';
@@ -88,27 +90,48 @@ export class ChannelsService implements OnModuleInit {
 
     if (!user.telegramId) throw new BadRequestException('Connect Telegram first');
 
-    const chat = await this.bot.telegram.getChat(chatId);
+    try {
+      const chat = await this.bot.telegram.getChat(chatId);
 
-    if (chat.type !== 'channel') throw new BadRequestException('Only channels are supported');
+      if (chat.type !== 'channel') throw new BadRequestException('Only channels are supported');
 
-    const me = await this.bot.telegram.getMe();
-    const [member, bot] = await Promise.all([
-      this.bot.telegram.getChatMember(chat.id, Number(user.telegramId)),
-      this.bot.telegram.getChatMember(chat.id, me.id),
-    ]);
+      const me = await this.bot.telegram.getMe();
+      const [member, bot] = await Promise.all([
+        this.bot.telegram.getChatMember(chat.id, Number(user.telegramId)),
+        this.bot.telegram.getChatMember(chat.id, me.id),
+      ]);
 
-    if (!['creator', 'administrator'].includes(member.status))
-      throw new ForbiddenException('Channel administrator rights required');
-    if (bot.status !== 'administrator')
-      throw new ForbiddenException('Add the bot as channel administrator');
+      if (bot.status !== 'administrator')
+        throw new ForbiddenException('Add the bot as channel administrator');
 
-    return {
-      chatId: String(chat.id),
-      title: chat.title,
-      username: chat.username ?? null,
-      canPublish: bot.can_post_messages === true,
-    };
+      if (!['creator', 'administrator'].includes(member.status))
+        throw new ForbiddenException('Channel administrator rights required');
+
+      return {
+        chatId: String(chat.id),
+        title: chat.title,
+        username: chat.username ?? null,
+        canPublish: bot.can_post_messages === true,
+      };
+    } catch (error) {
+      if (error instanceof TelegramError) {
+        const message =
+          'Channel unavailable. Check the username or ID and add the bot as a channel administrator, then try again.';
+
+        if (error.code === 403) throw new ForbiddenException(message);
+
+        if (
+          error.code === 400 &&
+          /chat not found|member list is inaccessible/i.test(error.description)
+        )
+          throw new BadRequestException(message);
+
+        if (error.code === 400 && /not enough rights|administrator rights/i.test(error.description))
+          throw new ForbiddenException('Add the bot as channel administrator');
+      }
+
+      throw error;
+    }
   }
 
   async add(ownerId: string, identifier: string) {
@@ -142,6 +165,45 @@ export class ChannelsService implements OnModuleInit {
     if (!channel) throw new NotFoundException('Channel not found');
 
     return channel;
+  }
+
+  async avatar(ownerId: string, id: string) {
+    const channel = await this.owned(ownerId, id);
+
+    try {
+      const chat = await this.bot.telegram.getChat(channel.chatId);
+
+      if (!('photo' in chat) || !chat.photo) throw new NotFoundException('Channel has no photo');
+
+      const url = await this.bot.telegram.getFileLink(chat.photo.small_file_id);
+      const upstream = await fetch(url, {
+        signal: AbortSignal.timeout(15_000),
+        redirect: 'error',
+      });
+      const contentType = upstream.headers.get('content-type') ?? '';
+
+      if (!upstream.ok || !upstream.body || !/^image\/(jpeg|png|webp)(;|$)/.test(contentType)) {
+        await upstream.body?.cancel();
+        throw new Error('Invalid channel photo');
+      }
+
+      const chunks: Uint8Array[] = [];
+      let bytes = 0;
+
+      for await (const chunk of upstream.body) {
+        bytes += chunk.length;
+
+        if (bytes > 2 * 1024 * 1024) throw new Error('Channel photo exceeds size limit');
+
+        chunks.push(chunk);
+      }
+
+      return { buffer: Buffer.concat(chunks), contentType };
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+
+      throw new ServiceUnavailableException('Channel photo is unavailable');
+    }
   }
 
   async remove(ownerId: string, id: string) {

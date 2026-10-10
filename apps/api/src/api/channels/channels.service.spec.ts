@@ -1,3 +1,6 @@
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { TelegramError } from 'telegraf';
+
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { TelegramService } from '@/telegram/telegram.service';
 import { RedisService } from '@/infra/redis/redis.service';
@@ -114,5 +117,157 @@ describe('channel identifier input', () => {
 
     await expect(service.add('owner', '1002145747740')).rejects.toThrow('administrator rights');
     expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['getChat', 400, 'Bad Request: chat not found', BadRequestException],
+    ['getChat', 403, 'Forbidden: bot was kicked from the channel chat', ForbiddenException],
+    ['getChatMember', 400, 'Bad Request: member list is inaccessible', BadRequestException],
+    [
+      'getChatMember',
+      403,
+      'Forbidden: bot is not a member of the channel chat',
+      ForbiddenException,
+    ],
+  ])(
+    'explains inaccessible channels from %s (%s)',
+    async (method, code, description, exception) => {
+      const mock = method === 'getChat' ? getChat : getChatMember;
+
+      mock.mockRejectedValue(new TelegramError({ error_code: code, description }));
+
+      const result = service.add('owner', '@channel_name');
+
+      await expect(result).rejects.toBeInstanceOf(exception);
+      await expect(result).rejects.toThrow('Check the username or ID and add the bot');
+      expect(upsert).not.toHaveBeenCalled();
+    },
+  );
+
+  it('explains missing bot administrator rights reported by Telegram', async () => {
+    getChatMember.mockRejectedValue(
+      new TelegramError({ error_code: 400, description: 'Bad Request: not enough rights' }),
+    );
+
+    await expect(service.add('owner', '@channel_name')).rejects.toThrow(
+      new ForbiddenException('Add the bot as channel administrator'),
+    );
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it.each(['member', 'left', 'kicked'])(
+    'requires administrator status for a %s bot',
+    async (status) => {
+      getChatMember.mockImplementation((_chat: number, id: number) =>
+        Promise.resolve({ status: id === 1 ? status : 'creator' }),
+      );
+
+      await expect(service.add('owner', '@channel_name')).rejects.toThrow(
+        'Add the bot as channel administrator',
+      );
+      expect(upsert).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    new TelegramError({ error_code: 401, description: 'Unauthorized' }),
+    new TelegramError({ error_code: 429, description: 'Too Many Requests' }),
+    new TelegramError({ error_code: 500, description: 'Internal Server Error' }),
+    new Error('Connection failed'),
+  ])('does not misreport unrelated Telegram failures as missing permissions', async (error) => {
+    getChat.mockRejectedValue(error);
+
+    await expect(service.add('owner', '@channel_name')).rejects.toBe(error);
+    expect(upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe('channel avatars', () => {
+  const findFirst = jest.fn();
+  const getChat = jest.fn();
+  const getFileLink = jest.fn();
+  const service = new ChannelsService(
+    { channel: { findFirst } } as unknown as PrismaService,
+    { telegram: { getChat, getFileLink } } as unknown as TelegramService,
+    {} as RedisService,
+  );
+  const privateUrl = new URL('https://api.telegram.org/file/botprivate-token/photo.jpg');
+  let fetchMock: jest.SpiedFunction<typeof fetch>;
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+    findFirst.mockResolvedValue({ chatId: '-100123' });
+    getChat.mockResolvedValue({ type: 'channel', photo: { small_file_id: 'small-photo' } });
+    getFileLink.mockResolvedValue(privateUrl);
+    fetchMock = jest.spyOn(globalThis, 'fetch');
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('returns the current small photo only after verifying ownership', async () => {
+    fetchMock.mockResolvedValue(
+      new Response('photo', { headers: { 'Content-Type': 'image/jpeg' } }),
+    );
+
+    const result = await service.avatar('owner', 'channel');
+
+    expect(findFirst).toHaveBeenCalledWith({ where: { id: 'channel', ownerId: 'owner' } });
+    expect(getChat).toHaveBeenCalledWith('-100123');
+    expect(getFileLink).toHaveBeenCalledWith('small-photo');
+    expect(result).toEqual({ buffer: Buffer.from('photo'), contentType: 'image/jpeg' });
+    expect(fetchMock).toHaveBeenCalledWith(privateUrl, {
+      signal: expect.any(AbortSignal) as unknown,
+      redirect: 'error',
+    });
+  });
+
+  it('does not contact Telegram for another account’s channel', async () => {
+    findFirst.mockResolvedValue(null);
+
+    await expect(service.avatar('other-owner', 'channel')).rejects.toThrow('Channel not found');
+    expect(getChat).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('reports a missing photo without downloading', async () => {
+    getChat.mockResolvedValue({ type: 'channel' });
+
+    await expect(service.avatar('owner', 'channel')).rejects.toThrow('Channel has no photo');
+    expect(getFileLink).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    new Response('missing', { status: 404 }),
+    new Response(null),
+    new Response('<svg/>', { headers: { 'Content-Type': 'image/svg+xml' } }),
+  ])('rejects failed downloads and unsupported images', async (response) => {
+    fetchMock.mockResolvedValue(response);
+
+    await expect(service.avatar('owner', 'channel')).rejects.toThrow(
+      'Channel photo is unavailable',
+    );
+  });
+
+  it('does not expose the private Telegram download URL on failure', async () => {
+    fetchMock.mockRejectedValue(new Error(String(privateUrl)));
+
+    await expect(service.avatar('owner', 'channel')).rejects.toThrow(
+      'Channel photo is unavailable',
+    );
+  });
+
+  it('enforces the byte limit even without a content-length header', async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(2 * 1024 * 1024));
+        controller.enqueue(new Uint8Array(1));
+        controller.close();
+      },
+    });
+    fetchMock.mockResolvedValue(new Response(body, { headers: { 'Content-Type': 'image/jpeg' } }));
+
+    await expect(service.avatar('owner', 'channel')).rejects.toThrow(
+      'Channel photo is unavailable',
+    );
   });
 });
