@@ -48,7 +48,6 @@ async function bootstrap() {
 
   useSwagger(app);
 
-  // Serves the client build when one exists; in dev that is Vite's job.
   useClientApp(app, config.get('CLIENT_DIST_PATH', { infer: true }));
 
   await app.listen(port);

@@ -8,13 +8,12 @@ import { createHash } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { z } from 'zod';
 
-import { AiService } from '@/ai/ai.service';
-import { createLanguageModel } from '@/ai/model';
 import {
-  defaultRewriteOptions,
+  AiService,
   rewriteOptionsSchema,
+  defaultRewriteOptions,
   type RewriteOptions,
-} from '@/ai/rewrite-options';
+} from '@/ai/ai.service';
 import { systemPrompt, promptVersion } from '@/ai/prompts/rewrite';
 
 import { evalCaseSchema, evaluate, type EvalCase } from './evaluate';
@@ -39,7 +38,7 @@ async function main() {
   });
   const ai = live ? new AiService(config) : undefined;
   const grader = judge
-    ? createLanguageModel(config).withStructuredOutput(
+    ? AiService.createLanguageModel(config).withStructuredOutput(
         z.strictObject({
           faithfulness: z.number().min(1).max(5),
           language: z.number().min(1).max(5),

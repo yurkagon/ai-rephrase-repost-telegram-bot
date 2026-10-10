@@ -80,7 +80,7 @@ Feature modules depend on Telegram transport and AI, without reverse imports or 
 
 ## AI contract and evaluation
 
-Versioned system and developer prompts live in `apps/api/src/ai/prompts/rewrite.ts`. The application and eval runner share this module; validated rewrite options supply its dynamic instructions.
+Versioned system and developer prompts live in `apps/api/src/ai/prompts/rewrite.ts`. The application and eval runner share this module; validated rewrite options supply its dynamic instructions. `AiService` handles model creation, response validation and execution metadata. Zod schemas and option defaults are declared below the service class in `ai.service.ts`. The eval judge reuses its static `createLanguageModel()` factory.
 
 `AiService.rewrite(text, options)` returns validated `{ html, model, promptVersion, durationMs, inputTokens?, outputTokens?, outcome }`. The model's schema remains strictly `{ html: string }` with `jsonSchema`, `strict` and `includeRaw`. System/developer instructions are separate from the untrusted post. Default model: `gpt-6-luna`, overridden with `LLM_MODEL`; Responses API, low reasoning, 30-second timeout, and up to two transport retries.
 

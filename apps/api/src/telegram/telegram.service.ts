@@ -12,8 +12,6 @@ import { Telegraf } from 'telegraf';
 
 import { TELEGRAM_OPTIONS, type TelegramModuleOptions } from './telegram.options';
 
-type TelegramSignal = NonNullable<Parameters<Telegraf['telegram']['callApi']>[2]>['signal'];
-
 @Injectable()
 export class TelegramService implements OnModuleInit, OnApplicationBootstrap, OnModuleDestroy {
   private readonly logger = new Logger(TelegramService.name);
@@ -121,3 +119,5 @@ export class TelegramService implements OnModuleInit, OnApplicationBootstrap, On
     this.pollingAbort.abort();
   }
 }
+
+type TelegramSignal = NonNullable<Parameters<Telegraf['telegram']['callApi']>[2]>['signal'];

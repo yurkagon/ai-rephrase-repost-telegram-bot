@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 
 test('new account connects channels, reviews an AI draft and publishes it', async ({
   page,
@@ -93,7 +94,10 @@ test('new account connects channels, reviews an AI draft and publishes it', asyn
 
   await page.route('**/api/posts/*/media/*', async (route) => {
     mediaRequests.add(route.request().url());
-    await route.fulfill({ contentType: 'image/png', path: '../api/uploads/default-avatar.png' });
+    await route.fulfill({
+      contentType: 'image/png',
+      path: fileURLToPath(new URL('./fixtures/photo.png', import.meta.url)),
+    });
   });
   await request.post('http://127.0.0.1:3088/__test/album');
   await page.goto('/workspace');

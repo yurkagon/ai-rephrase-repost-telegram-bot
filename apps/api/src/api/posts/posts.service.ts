@@ -19,7 +19,7 @@ import { PrismaService } from '@/infra/prisma/prisma.service';
 import { Prisma } from '@generated/prisma/client';
 import { TelegramService } from '@/telegram/telegram.service';
 import type { Environment } from '@/config/env.schema';
-import { rewriteOptionsSchema } from '@/ai/rewrite-options';
+import { rewriteOptionsSchema } from '@/ai/ai.service';
 import { ChannelsService } from '@/api/channels/channels.service';
 
 import { telegramHtml, messageToHtml } from './telegram-html';

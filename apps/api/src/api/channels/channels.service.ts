@@ -11,7 +11,7 @@ import { PrismaService } from '@/infra/prisma/prisma.service';
 import { RedisService } from '@/infra/redis/redis.service';
 import { TelegramService } from '@/telegram/telegram.service';
 import { newToken, tokenHash } from '@/api/auth/auth.service';
-import { rewriteOptionsSchema } from '@/ai/rewrite-options';
+import { rewriteOptionsSchema } from '@/ai/ai.service';
 
 import { CreateRouteDto, UpdateRouteDto } from './channels.dto';
 

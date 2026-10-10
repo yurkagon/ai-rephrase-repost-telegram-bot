@@ -14,10 +14,9 @@ import type { Message } from 'telegraf/types';
 import { RedisService } from '@/infra/redis/redis.service';
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { TelegramService } from '@/telegram/telegram.service';
-import { AiService } from '@/ai/ai.service';
+import { AiService, defaultRewriteOptions } from '@/ai/ai.service';
 import { ChannelsService } from '@/api/channels/channels.service';
 import { ExceptionsFilter } from '@/common/filters/exceptions.filter';
-import { defaultRewriteOptions } from '@/ai/rewrite-options';
 
 import { PostsService } from './posts.service';
 import { PostsProcessor } from './posts.processor';
@@ -306,7 +305,12 @@ integration('MVP integration on isolated PostgreSQL + Redis', () => {
       await http()
         .post('/api/channels/routes')
         .auth(access, { type: 'bearer' })
-        .send({ sourceId: source, targetId: target, name: 'Cycle', options: defaultRewriteOptions })
+        .send({
+          sourceId: source,
+          targetId: target,
+          name: 'Cycle',
+          options: defaultRewriteOptions,
+        })
         .expect(400);
   });
   it('collects without AI, deduplicates updates and skips destination channel', async () => {

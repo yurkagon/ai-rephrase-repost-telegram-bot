@@ -6,9 +6,7 @@ import { AIMessage } from '@langchain/core/messages';
 import type { ChatResult } from '@langchain/core/outputs';
 import { z } from 'zod';
 
-import { defaultRewriteOptions } from './rewrite-options';
-import { AiService } from './ai.service';
-import * as modelFactory from './model';
+import { AiService, RewriteError, rewriteOptionsSchema, defaultRewriteOptions } from './ai.service';
 import { systemPrompt, buildDeveloperPrompt } from './prompts/rewrite';
 
 function response(text = JSON.stringify({ html: '<b>Привіт</b>' })) {
@@ -46,8 +44,8 @@ function setup(body: unknown = response(), status = 200) {
     });
   });
   const config = new ConfigService({ OPENAI_API_KEY: 'test-key', LLM_MODEL: 'gpt-6-luna' });
-  const model = modelFactory.createLanguageModel(config);
-  const createModel = jest.spyOn(modelFactory, 'createLanguageModel').mockReturnValueOnce(model);
+  const model = AiService.createLanguageModel(config);
+  const createModel = jest.spyOn(AiService, 'createLanguageModel').mockReturnValueOnce(model);
   const structuredOutput = jest.spyOn(model, 'withStructuredOutput');
 
   return { rewriter: new AiService(config), model, requests, fetch, createModel, structuredOutput };
@@ -85,7 +83,11 @@ it('uses Responses with a strict HTML schema and keeps instructions separate fro
     reasoning: { effort: 'low' },
     input: [
       { type: 'message', role: 'developer', content: systemPrompt },
-      { type: 'message', role: 'developer', content: buildDeveloperPrompt(defaultRewriteOptions) },
+      {
+        type: 'message',
+        role: 'developer',
+        content: buildDeveloperPrompt(defaultRewriteOptions),
+      },
       { type: 'message', role: 'user', content: input },
     ],
     text: {
@@ -127,6 +129,48 @@ it('skips empty, whitespace and one-character inputs without requesting AI', asy
     await expect(rewriter.rewrite(input)).resolves.toMatchObject({ html: '' });
 
   expect(requests).toHaveLength(0);
+});
+
+it('keeps strict option defaults and rejects oversized input before requesting AI', async () => {
+  const { rewriter, requests } = setup();
+
+  expect(rewriteOptionsSchema.parse({})).toEqual({
+    mode: 'translate',
+    language: 'uk',
+    tone: 'neutral',
+    length: 'preserve',
+    removeSource: true,
+  });
+  expect(defaultRewriteOptions).toEqual(rewriteOptionsSchema.parse({}));
+  expect(() => rewriteOptionsSchema.parse({ language: 'de' })).toThrow();
+  expect(() => rewriteOptionsSchema.parse({ extra: true })).toThrow();
+
+  await expect(rewriter.rewrite('x'.repeat(16_001))).rejects.toThrow('AI input limit');
+  expect(requests).toHaveLength(0);
+  expect(logs).not.toHaveBeenCalled();
+});
+
+it('preserves failure metadata and logs only execution metadata', async () => {
+  const { rewriter, requests } = setup(response(JSON.stringify({ html: '' })));
+  const error: unknown = await rewriter.rewrite('Private input').catch((error: unknown) => error);
+
+  expect(error).toBeInstanceOf(RewriteError);
+  expect(error).toMatchObject({
+    metadata: {
+      model: 'gpt-6-luna',
+      outcome: 'empty_output',
+      inputTokens: 10,
+      outputTokens: 5,
+    },
+  });
+
+  if (!(error instanceof RewriteError)) throw new Error('Expected rewrite failure metadata');
+
+  expect(error.metadata.durationMs).toBeGreaterThanOrEqual(0);
+  expect(logs).toHaveBeenCalledTimes(1);
+  expect(logs).toHaveBeenCalledWith(expect.objectContaining({ outcome: 'empty_output' }));
+  expect(JSON.stringify(logs.mock.calls)).not.toContain('Private input');
+  expect(requests).toHaveLength(1);
 });
 
 it('rejects refusals without another generation or logging their content', async () => {
@@ -202,7 +246,7 @@ it('recovers from a connection failure using the LangChain retry loop', async ()
 });
 
 function serviceWithModel(model: BaseChatModel) {
-  jest.spyOn(modelFactory, 'createLanguageModel').mockReturnValueOnce(model);
+  jest.spyOn(AiService, 'createLanguageModel').mockReturnValueOnce(model);
 
   return new AiService(new ConfigService());
 }
@@ -279,7 +323,7 @@ it('has independent models and does not publish reasoning blocks', async () => {
 });
 
 it('uses the configured AI key and model', () => {
-  const model = modelFactory.createLanguageModel(
+  const model = AiService.createLanguageModel(
     new ConfigService({ OPENAI_API_KEY: 'standard-key', LLM_MODEL: 'custom-model' }),
   );
 

@@ -4,8 +4,7 @@ import type { Job } from 'bullmq';
 import { z } from 'zod';
 
 import { PrismaService } from '@/infra/prisma/prisma.service';
-import { AiService } from '@/ai/ai.service';
-import { RewriteError, rewriteOptionsSchema } from '@/ai/rewrite-options';
+import { AiService, RewriteError, rewriteOptionsSchema } from '@/ai/ai.service';
 import { ChannelsService } from '@/api/channels/channels.service';
 import { TelegramService } from '@/telegram/telegram.service';
 
