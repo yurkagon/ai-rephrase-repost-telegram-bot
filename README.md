@@ -1,174 +1,258 @@
-# TeleDraft AI
+<p align="center">
+  <img src="docs/assets/teledraft-ai-logo.png" width="140" alt="TeleDraft AI logo" />
+</p>
 
-A full-stack Telegram editorial workspace: collect channel posts, prepare structured AI drafts, review the result, and publish the exact version you approved.
+<h1 align="center">TeleDraft AI</h1>
 
-Built with NestJS, React, PostgreSQL, Prisma, Redis, BullMQ, LangChain and OpenAI. The interface supports Ukrainian and English and follows Telegram Desktop's familiar layout. AI output language is selected independently.
+<p align="center">
+  <strong>AI-powered drafts for your Telegram channels.</strong><br />
+  Collect posts. Rewrite with AI. Review, edit and publish.
+</p>
 
-The package name is `teledraft-ai`. Existing Docker project/database identifiers and the browser token-storage key retain their legacy names so the branding change reuses existing data and sign-ins. Keep your local `.env` values when updating an existing installation.
+<p align="center">
+  <a href="#screenshots">Screenshots</a> ·
+  <a href="#the-ai-pipeline">AI pipeline</a> ·
+  <a href="#getting-started">Getting started</a> ·
+  <a href="#model--prompt-evals">Evals</a>
+</p>
 
-## What works
+**TeleDraft AI** is a self-hosted, full-stack editorial workspace for Telegram channel owners. It turns incoming posts into AI-generated drafts tailored to your channel's style, with a rich text editor and a familiar Telegram-style preview. You choose what to generate and approve the saved version before the bot publishes it.
 
-- Registration without email confirmation, hashed passwords, profile password changes and stateless JWT access/refresh tokens.
-- One shared platform bot; Telegram account linking with an expiring, single-use deep link.
-- Administrator-verified channels and dynamic source → destination routes, with cycle prevention.
-- Persistent inbox for text, photos, videos and albums; deduplication by route and Telegram message/group IDs.
-- On-demand editorial rewriting with language, tone, length and source-signature settings.
-- Telegram-compatible rich text editor, source/preview and version history.
-- Explicit confirmation before publishing; no automatic publication or fallback to the original after AI failure.
-- Discard unwanted inbox posts with confirmation. Draft versions are deleted; the original record stays to prevent replayed Telegram updates from restoring the post. Posts cannot be discarded while generating, publishing or awaiting delivery verification, or after publication.
-- Durable operation records and a Redis-backed queue, token/latency/error metrics and a repository-owned eval suite.
+The AI layer uses **LangChain, OpenAI Responses API and Zod structured output**, with versioned prompts, configurable rewrite rules, execution metrics and a small live evaluation suite. The application combines a NestJS API, a React client, PostgreSQL persistence and Redis-backed background jobs.
+
+![Inbox with AI rewrite controls and a draft](docs/screenshots/inbox.png)
+
+## How it works
+
+1. **Connect your Telegram account** and add the platform bot as an administrator to two channels you manage: a collection channel and a publication channel.
+2. **Create a route** between them. Choose the output language, tone, length, rewrite strength and optional channel-specific writing rules.
+3. **Forward or write a new post** in the collection channel. Text, photos, videos and albums appear in Inbox, with the original content preserved.
+4. **Generate an AI draft.** Add optional instructions for this particular post, review the result, edit its wording or formatting, and save your changes.
+5. **Confirm publication.** The bot sends the approved version and its media to the destination channel. Unwanted posts can be discarded instead.
 
 ```mermaid
 flowchart LR
-  TG[Telegram channel] --> Ingest[Persist incoming post]
-  Ingest --> Inbox[Inbox]
-  Inbox -->|Generate| Op[PostgreSQL operation record]
-  Op --> Queue[BullMQ / Redis]
-  Queue --> AI[LangChain structured output]
+  Source[Collection channel] --> Inbox[Inbox / original]
+  Inbox -->|Generate| AI[AI rewrite]
   AI --> Draft[Versioned draft]
-  Draft --> Review[Review / edit / preview]
-  Review -->|Confirm saved version| Send[Publication operation]
-  Send --> Destination[Destination channel]
+  Draft --> Review[Edit / preview / save]
+  Review -->|Confirm| Target[Publication channel]
 ```
 
-## Local development
+The bot collects new posts from connected channels. To prepare content from another channel, forward it into your collection channel. The in-app **Guide** walks through the setup and permissions.
 
-Use Node 24+, pnpm (the version is pinned in `package.json`) and Docker.
+## Screenshots
 
-```sh
-cp .env.sample .env
-pnpm install
-pnpm db:up
-pnpm db:deploy
-pnpm db:generate
-pnpm dev
-```
+**Connected channels**
 
-Set `TELEGRAM_BOT_API_TOKEN`, `OPENAI_API_KEY` and a random `JWT_SECRET` in `.env`. Keep local credentials private. `APP_URL` must match the browser's origin; use the actual client port if you change it. Ports and database connections are documented in `.env.sample`.
+![Connected Telegram channels and administrator guidance](docs/screenshots/channels.png)
 
-The API starts the bot's polling and queue workers together. A fatal Telegram startup/polling failure stops the shared process; individual generation/publication failures are saved and shown in the workspace. Production runs **one API instance** per bot token.
+**Routes and reusable rewrite rules**
 
-Open the client at `http://localhost:3001`. API documentation: `http://localhost:3000/docs`; OpenAPI JSON: `/openapi.json`; readiness: `/api/health`.
+![Source and destination route with AI defaults and writing rules](docs/screenshots/routes.png)
 
-`pnpm db:seed` optionally creates the configured SUPERADMIN. It is separate from normal registration; every publicly registered account is `USER`. Existing administrator roles are preserved by migrations. Existing accounts can sign in immediately; no email confirmation or email-based password recovery is required. Login returns access and refresh JWTs; refresh accepts `{ refreshToken }` in the request body. The client keeps the access token in memory and the refresh token in sessionStorage for the current tab. Logout clears the client tokens. Tokens cannot be revoked individually and remain valid until expiry, including after password changes.
+## Features
 
-### Connect your channels
+- **AI editorial rewriting:** Ukrainian or English output, three tones, length controls and light, moderate or deep rewriting.
+- **Your writing rules:** reusable instructions per route, plus optional instructions for a single generation. Compatible post-specific style instructions take precedence over route style rules.
+- **Connected Telegram channels:** single-use account linking, administrator checks, public/private channels, dynamic routes, pause/resume and cycle prevention.
+- **Persistent Inbox:** original text and media, photo/video support and albums of 2–10 items.
+- **Draft workspace:** Telegram-compatible rich text, compact media galleries, preview, separate AI/manual revisions, version history and unsaved-change protection.
+- **Reviewed publishing:** confirmation of a saved revision, publication history and recovery controls when Telegram delivery is uncertain. AI errors keep the post available for correction.
+- **Accounts and access:** registration, login, profile/password updates, Argon2 password hashing, JWT authentication and owner-scoped data access.
+- **Bilingual interface:** Ukrainian and English UI, independently selected from the AI output language; responsive desktop/mobile layouts.
+- **AI visibility:** recorded model, prompt version, settings, outcome, token usage when available and response time, with a dedicated metrics page.
 
-1. Register and sign in immediately.
-2. Open **Channels → Connect Telegram**, follow the bot link, and refresh the connection.
-3. Add the bot as an administrator to your source and destination channels. Grant permission to post in the destination.
-4. Add each channel by `@username`, or its numeric ID without a minus sign (e.g. `1001234567890`) for a private channel. Signed IDs are also accepted. The linked Telegram user must administrate both channels.
-5. Create a route, choose the AI defaults, and publish a **new** test post in the source channel.
-6. Select it from Inbox, generate a draft, edit/save if needed, then confirm publication.
+## The AI pipeline
 
-The app’s **Guide** page (`/guide`) explains the two-channel setup, bot administrator permissions, manual forwarding into the collection channel, and the review/publish/discard workflow in Ukrainian and English.
-
-The bot receives new posts only from channels where it has been added. This MVP does not scrape other channels or import existing history. A Telegram account/channel can belong to one platform account; teams are outside this release.
-
-## Code structure
+One `AiService` creates the model and structured runnable once. Generation runs through the background queue; receiving a Telegram post does not call AI.
 
 ```text
-apps/api/src/
-  api/
-    auth/, user/     accounts, JWT authentication and profiles
-    channels/        Telegram linking, verified channels and route settings
-    posts/           ingestion, drafts, operations, queue worker and media proxy
-  ai/                one AiService, provider settings, versioned prompts and rewrite options
-  evals/             12 model/prompt scenarios and a budgeted live runner
-  telegram/          Telegraf construction, handlers transport and cancellable polling
-  config/            Zod-validated server environment
-  infra/             Prisma and Redis
-apps/client/src/     bilingual React workspace, editor, account and channel flows
+Validated settings + versioned prompts + original post
+  → LangChain / OpenAI Responses API
+  → strict { html: string }
+  → refusal / completion / schema / empty-output checks
+  → versioned draft + execution metadata
+  → human review + Telegram HTML / length validation
+  → confirmed publication
 ```
 
-Feature modules depend on Telegram transport and AI, without reverse imports or service locators. Prisma is used directly; no extra repository layer. Original Telegram content, AI revisions and manual revisions are separate records. Telegram file IDs are reused; previews are fetched through an owner-authorized bounded proxy and never expose the bot token.
+### Prompts and controls
 
-## AI contract and evaluation
+Prompts live in [`apps/api/src/ai/prompts/rewrite.ts`](apps/api/src/ai/prompts/rewrite.ts) and are shared by the application and eval runner.
 
-Versioned system and developer prompts live in `apps/api/src/ai/prompts/rewrite.ts`. The application and eval runner share this module; validated rewrite options supply its dynamic instructions. `AiService` handles model creation, response validation and execution metadata. Zod schemas and option defaults are declared below the service class in `ai.service.ts`.
+- **System prompt:** editorial role, preservation of facts and a trust boundary around the incoming post.
+- **Developer prompt:** validated rewrite settings, formatting/link rules, route instructions and post-specific instructions.
+- **User message:** the original post, treated as content rather than instructions to execute.
 
-Routes support optional rewrite rules (up to 2000 characters), editable on the Routes page. They are stored in the existing route options and snapshotted into each generation operation and AI run. The developer prompt applies them within the fixed rules for factual accuracy, language and Telegram HTML; an empty field preserves the default behavior.
+| Control             | Options / behavior                                                                                        |
+| ------------------- | --------------------------------------------------------------------------------------------------------- |
+| Output language     | Ukrainian or English                                                                                      |
+| Tone                | Neutral, formal or friendly                                                                               |
+| Length              | Keep length or concise                                                                                    |
+| Rewrite strength    | Light wording changes, moderate rephrasing or a deep rewrite of the opening and structure                 |
+| Source signature    | Optionally remove the trailing source/channel signature; preserve YouTube signatures and meaningful links |
+| Custom instructions | Route rules and per-post instructions, each limited to 2000 characters                                    |
 
-The Inbox also offers an optional post instruction next to Generate/Regenerate (up to 2000 characters). It supplements the current route rules and is snapshotted for that generation; it never updates the route settings. Post-specific style instructions take precedence over route style instructions, within the fixed rewrite constraints.
+Rewriting applies even when the post already uses the target language. Prompts require preservation of material facts, names, dates, numbers and meaningful links. Custom rules operate within these constraints; they cannot replace the response contract or change roles.
 
-Rewriting supports light, moderate (default) and deep rewrite strength in route settings and the Inbox. Light keeps most phrasing and structure; moderate rephrases sentences; deep rebuilds the opening, organization and wording while preserving meaning and all material facts. Existing route options default to moderate; each generation records the selected strength. The rewrite-mode removal migration strips the obsolete mode from routes and operation settings while preserving drafts, other settings and historical AI run metadata. Run `pnpm --filter api db:deploy` before starting the updated API.
+### Structured output and reliability
 
-`AiService.rewrite(text, options)` returns validated `{ html, model, promptVersion, durationMs, inputTokens?, outputTokens?, outcome }`. The model's schema remains strictly `{ html: string }` with `jsonSchema`, `strict` and `includeRaw`. System/developer instructions are separate from the untrusted post. Default model: `gpt-6-luna`, overridden with `LLM_MODEL`; Responses API, low reasoning, 30-second timeout, and up to two transport retries.
+The model returns only **`{ html: string }`**, defined by a strict Zod schema through LangChain's `withStructuredOutput()` with `method: "jsonSchema"`, `strict: true` and `includeRaw: true`.
 
-Every generation rewrites the post in the selected output language, including posts already written in that language. Tone, length, rewrite strength and custom instructions guide the wording while preserving facts. Meaningful links are retained; only a trailing source signature is removed when enabled, with the YouTube exception. Runtime HTML and Telegram length checks still apply: structured output alone does not ensure safe markup or correct meaning. See [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
+[`AiService`](apps/api/src/ai/ai.service.ts) checks refusals, incomplete generation, invalid schemas and empty results. The default model is `gpt-6-luna`, configurable through `LLM_MODEL`; it uses the Responses API with low reasoning effort, a 30-second request timeout and up to two retries for transient transport/provider failures. Refused or invalid content is not regenerated automatically.
 
-The small eval suite in `apps/api/src/evals/cases.ts` contains 12 synthetic posts with concrete checks and a manual review question per case. Every eval calls the production `AiService` with the current model and prompts. It covers facts and numbers, both output languages, HTML/links, source signatures and YouTube, emoji, route/post rules, embedded instructions, deep rewriting and concise captions. There is no offline reference scoring or LLM judge.
+Each run records the prompt version, settings, model, duration, available token usage and outcome. Application logs contain execution metadata without full post text or API keys. AI and manual revisions remain separate, so editing does not overwrite the generated version.
+
+Structured output guarantees the response shape, **not factual accuracy or valid Telegram markup**. The server validates HTML and length before saving/publishing, and browser previews are sanitized. Review the wording, facts and links before approving a draft. See [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
+
+## Model & prompt evals
+
+The repository includes **12 focused live eval cases** in [`apps/api/src/evals/cases.ts`](apps/api/src/evals/cases.ts). They exercise the production `AiService` and its actual prompts against the configured model:
+
+- Ukrainian/English rewriting and preservation of facts and numbers.
+- Telegram HTML, meaningful links, source signatures and the YouTube exception.
+- Requested emoji, route rules and post-specific overrides.
+- Instructions embedded in the source post, deep rewriting and concise captions.
 
 ```sh
-# Real OpenAI requests: one generation for each of the 12 cases
+# Run all 12 cases against the real model
 pnpm evals --budget-calls 12
 
-# Quickly check the emoji instruction with one generation
+# Run one targeted case
 pnpm evals --case emoji --budget-calls 1
 
-# Save a named result for comparing prompt changes or models
+# Save a separate report for a candidate model or prompt version
 LLM_MODEL=YOUR_MODEL pnpm evals --budget-calls 12 --out eval-reports/candidate.json
 ```
 
-The runner loads `OPENAI_API_KEY` and `LLM_MODEL` from the root `.env`, with environment overrides and the same validation/default model as the API. It does not start Telegram or connect to PostgreSQL/Redis. The call budget counts generations; the existing transport retries can add HTTP requests. A failed check returns a nonzero exit code. A provider failure stops the run and records it as incomplete.
+**Live evals make paid OpenAI requests and require an explicit call budget.** The budget counts generations; transport retries can add HTTP requests. The runner reads the root `.env`, honors environment overrides and uses only the AI configuration. PostgreSQL, Redis and Telegram are not needed.
 
-Reports under `apps/api/eval-reports/` contain the inputs, real outputs, settings, system/developer prompts, prompt version, model, failures, duration and available token usage. Use separate output files to review prompt/model changes side by side. Read every result against its `review` question: script detection, preserved numbers/links and emoji checks do not prove factual equivalence, fluency, tone or a good rewrite. Human review complements task-specific checks, following [OpenAI evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices).
+JSON reports are written to `apps/api/eval-reports/`. They include inputs, outputs, resolved settings, prompts, prompt version, model, check failures, timing and available token usage. Failed checks produce a nonzero exit code; a provider failure stops the run and records incomplete execution.
 
-Normal Jest/CI tests only verify runner behavior with local stubs. They make no paid calls and are not model-quality results. Live evals run only through the explicit command above.
+Each case also has a **manual review question**. Compare reports from different prompt versions or models and read the outputs: automatic number/link/language checks cannot establish semantic accuracy or editorial quality. There is no LLM judge. Normal tests and CI use local stubs and make no paid calls. This separation follows [task-specific evaluation and human review](https://developers.openai.com/api/docs/guides/evaluation-best-practices).
 
-## Verification
+## Tech stack
+
+| Layer                | Technologies                                                                                       |
+| -------------------- | -------------------------------------------------------------------------------------------------- |
+| AI                   | LangChain, OpenAI Responses API, Zod structured output, versioned prompts, live eval runner        |
+| API                  | TypeScript, NestJS, Telegraf, Passport/JWT, Argon2, OpenAPI/Scalar                                 |
+| Data and jobs        | PostgreSQL 17, Prisma 7 with migrations, Redis 7, BullMQ                                           |
+| Frontend             | React 19, Vite, Tailwind CSS, React Router, TanStack Query, i18next, Tiptap, Lucide                |
+| Quality and delivery | Jest, Vitest, Playwright, ESLint, Prettier, Husky, GitHub Actions, Docker Compose, pnpm workspaces |
+
+## Architecture
+
+```text
+apps/
+  api/
+    prisma/                  entity schemas, migrations and seed
+    src/
+      api/
+        auth/, user/         authentication and profiles
+        channels/            Telegram linking, channels and routes
+        posts/               ingestion, revisions, operations and queue worker
+      ai/                    AiService, options and versioned prompts
+      evals/                 model/prompt cases and budgeted runner
+      telegram/              Telegraf transport, polling and HTML utilities
+      config/                Zod-validated environment
+      infra/                 Prisma and Redis
+  client/
+    src/                     workspace, editor, settings and bilingual guide
+    e2e/                     desktop/mobile browser tests
+packages/shared/             shared package workspace
+
+docs/
+  assets/                    generated brand logo
+  screenshots/               desktop product screenshots
+```
+
+## Getting started
+
+### Requirements
+
+- **Node.js 24+**, the pnpm version pinned in `package.json`, and Docker with Compose.
+- A Telegram bot token and **two channels you administer**.
+- An OpenAI API key with access to the configured model.
+
+### Install and run
+
+```sh
+pnpm install
+cp .env.sample .env
+```
+
+Edit `.env` before starting. Required secrets and key settings:
+
+| Variable                    | Purpose                                                                |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `TELEGRAM_BOT_API_TOKEN`    | Platform bot token, created through Telegram's `@BotFather`            |
+| `OPENAI_API_KEY`            | Server-side OpenAI key for rewriting and live evals                    |
+| `JWT_SECRET`                | Strong random signing secret; generate one with `openssl rand -hex 32` |
+| `LLM_MODEL`                 | Optional model override; default: `gpt-6-luna`                         |
+| `APP_URL`                   | Browser origin; default: `http://localhost:3001`                       |
+| `DATABASE_URL`, `REDIS_URL` | Database and queue connections; local defaults are in `.env.sample`    |
+
+Keep secrets in local `.env` files. For an existing installation, retain your current values rather than copying the sample over them. All ports, token lifetimes and optional seed settings are documented in [`.env.sample`](.env.sample).
+
+```sh
+pnpm db:up
+pnpm db:generate
+pnpm db:deploy
+pnpm dev
+```
+
+| Service           | Local URL                          |
+| ----------------- | ---------------------------------- |
+| Application       | http://localhost:3001              |
+| API documentation | http://localhost:3000/docs         |
+| OpenAPI JSON      | http://localhost:3000/openapi.json |
+| Readiness         | http://localhost:3000/api/health   |
+
+### Connect Telegram
+
+1. Open **Channels → Connect Telegram → Open the bot**, start the bot and refresh the connection on the site. The linking code is single-use and expires after 10 minutes.
+2. In Telegram, add that bot as an **administrator to both channels**. Grant posting permission in the publication channel. Your linked Telegram account must also administer both channels.
+3. Add public channels with `@username`. For a private channel, enter its numeric ID without the minus sign, for example `1001234567890`; signed IDs are accepted too.
+4. Create an active source → destination route on **Routes** and set your rewrite defaults.
+5. Forward a **new** post into the collection channel, then open **Inbox** to generate, edit and publish it.
+
+To find a private channel ID, copy a post link: `https://t.me/c/1234567890/42`. Add `1000000000000` to the number after `/c/` and enter `1001234567890`. An invite link such as `t.me/+…` does not contain the channel ID. The Channels page includes these instructions.
+
+## Commands
+
+Run from the repository root:
+
+| Command                            | Purpose                                                     |
+| ---------------------------------- | ----------------------------------------------------------- |
+| `pnpm dev`                         | Start API and client in watch mode                          |
+| `pnpm dev:api` / `pnpm dev:client` | Start one application                                       |
+| `pnpm build`                       | Generate Prisma client and build all workspace applications |
+| `pnpm start:prod`                  | Start the built API; serves the client build in production  |
+| `pnpm test`                        | Run API and client unit tests                               |
+| `pnpm test:integration`            | Run API integration scenarios with isolated test services   |
+| `pnpm test:e2e`                    | Run the full browser flow on desktop and mobile             |
+| `pnpm typecheck`                   | Check API/client types, including API tests                 |
+| `pnpm lint`                        | Check API/client lint rules                                 |
+| `pnpm format`                      | Format supported repository files                           |
+| `pnpm db:up` / `pnpm db:down`      | Start/stop local PostgreSQL and Redis                       |
+| `pnpm db:generate`                 | Generate Prisma client                                      |
+| `pnpm db:migrate`                  | Create/apply development migrations                         |
+| `pnpm db:deploy`                   | Apply committed migrations                                  |
+| `pnpm db:view`                     | Open Prisma Studio                                          |
+| `pnpm db:seed`                     | Create the configured administrator                         |
+| `pnpm evals --budget-calls 12`     | Evaluate the real model and prompts                         |
+
+### Tests and CI
 
 ```sh
 pnpm test
-pnpm typecheck          # includes API tests
+pnpm typecheck
 pnpm lint
 pnpm build
 ```
 
-Integration and browser tests require **isolated, migrated** PostgreSQL and Redis. External Telegram and OpenAI are replaced with local stubs. Browser tests require a dedicated database whose name ends in `_test`; their test-only server resets its data between scenarios. Never point these variables at production.
+## License
 
-```sh
-DATABASE_URL=postgresql://postgres:test@localhost:55439/teledraft_browser_test pnpm db:deploy
-TEST_DATABASE_URL=postgresql://postgres:test@localhost:55439/teledraft_browser_test \
-TEST_REDIS_URL=redis://localhost:56390/1 pnpm test:integration
-
-pnpm --filter client exec playwright install chromium
-TEST_DATABASE_URL=postgresql://postgres:test@localhost:55439/teledraft_browser_test \
-TEST_REDIS_URL=redis://localhost:56390/1 pnpm test:e2e
-```
-
-Coverage includes ownership boundaries, public role injection, JWT expiry/type checks, bot permissions, routes, replayed updates, album order/deduplication, recovery after Redis failure and restart, shutdown during generation, password changes, AI failure blocking, optimistic draft revisions, ambiguous Telegram delivery and the registration → reviewed publication flow on desktop/mobile.
-
-## Production deployment
-
-Configure HTTPS `APP_URL`, strong JWT/database credentials and working bot/OpenAI keys. `.env` is excluded from the image. Place the app behind an HTTPS reverse proxy; the API serves the built client on the same origin. Production trusts one reverse-proxy hop for client IP rate limits. The proxy must replace `X-Forwarded-For` with the actual client IP; keep the app’s loopback port private and do not expose PostgreSQL or Redis ports. The initial deployment is single-instance polling; no webhook or separate worker is needed.
-
-```sh
-docker compose -f compose.production.yaml build
-docker compose -f compose.production.yaml up -d postgres redis
-docker compose -f compose.production.yaml run --rm app pnpm db:deploy
-docker compose -f compose.production.yaml up -d app
-```
-
-Set `LOCAL_POSTGRES_PASSWORD` and `JWT_SECRET` to strong random values. URL-encode reserved characters in database URL credentials.
-
-Redis uses AOF and a persistent volume; PostgreSQL holds source content, drafts, operation intents and publication results. The queue dispatcher re-enqueues pending intents after recovery. A generation interrupted after starting requires a manual retry. A publication interrupted during sending becomes **delivery unknown**; verify the destination before marking it published or explicitly allowing another send.
-
-### Backup and restore
-
-```sh
-docker compose -f compose.production.yaml exec -T postgres \
-  sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > backup.sql
-
-# Stop the app, restore into a new empty database, then migrate and restart.
-docker compose -f compose.production.yaml stop app
-# On the replacement PostgreSQL database:
-psql "$RESTORE_DATABASE_URL" < backup.sql
-# Configure DATABASE_URL to the restored database before restarting.
-```
-
-Protect backups like channel content and account data. Restore PostgreSQL first; pending operation intents can recreate queue jobs. Run `pnpm db:deploy` before starting the restored app. Already-running publications are intentionally not sent automatically again.
-
-## Limits
-
-No scraping/MTProto, channel history import, automatic/scheduled posting, teams, payments, RAG, agents or demo mode. The album's 1000 ms quiet period is a completeness heuristic; Telegram updates are retained by Telegram for a limited time. Telegram sending has no general exactly-once guarantee. Media preview is capped at 20 MiB and may be unavailable even when Telegram can republish the saved file. Live provider access, real rewrite quality and actual public deployment require separate smoke tests; offline test success is not evidence of those.
+[MIT](LICENSE) © 2026 Yurii Khvyshchuk.

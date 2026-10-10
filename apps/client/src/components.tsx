@@ -1,7 +1,7 @@
 import { useEffect, lazy, useRef, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import DOMPurify from 'dompurify';
-import { LoaderCircle, Send } from 'lucide-react';
+import { LoaderCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 import { mediaBlob } from './api';
@@ -28,9 +28,7 @@ export function Brand() {
 
   return (
     <div className="brand">
-      <span className="brand-mark">
-        <Send size={21} />
-      </span>
+      <img className="brand-mark" src="/teledraft-ai-logo.png" alt="" width={56} height={56} />
       <span>
         {t('product')}
         <small>Telegram workspace</small>
